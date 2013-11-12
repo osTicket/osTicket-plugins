@@ -1,0 +1,10 @@
+.htaccess
+php53.cgi
+include/ost-config.php
+*.sw[a-z]
+.DS_Store
+.vagrant
+Vagrantfile
+
+# Staging directory used for packaging script
+stage
