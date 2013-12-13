@@ -16,7 +16,8 @@ function splat($what) {
 }
 
 require_once(INCLUDE_DIR.'class.auth.php');
-class LDAPAuthentication extends AuthenticationBackend {
+class LDAPAuthentication extends AuthenticationBackend
+        implements AuthDirectorySearch {
     static $name = "Active Directory or LDAP";
     static $id = "ldap";
 
@@ -39,7 +40,7 @@ class LDAPAuthentication extends AuthenticationBackend {
                 'mobile' => false,
                 'username' => 'sAMAccountName',
                 'dn' => '{username}@{domain}',
-                'search' => '(&(objectCategory=person)(objectClass=user)(sAMAccountName={q}*))',
+                'search' => '(&(objectCategory=person)(objectClass=user)(|(sAMAccountName={q}*)(firstName={q}*)(lastName={q}*)(displayName={q}*)))',
             ),
             'group' => array(
                 'ismember' => '(&(objectClass=user)(sAMAccountName={username})
@@ -59,7 +60,7 @@ class LDAPAuthentication extends AuthenticationBackend {
                 'mobile' => 'mobileTelephoneNumber',
                 'username' => 'uid',
                 'dn' => 'uid={username},{search_base}',
-                'search' => '(&(objectClass=posixAccount)(uid={q}*))',
+                'search' => '(&(objectClass=posixAccount)(|(uid={q}*)(displayName={q}*)(cn={q}*)))',
             ),
         ),
     );
@@ -147,8 +148,21 @@ class LDAPAuthentication extends AuthenticationBackend {
             $r = $c->bind();
             if (!PEAR::isError($r))
                 return $c;
-            var_dump($r);
         }
+    }
+
+    /**
+     * Binds to the directory under the search-user credentials configured
+     */
+    function _bind($connection) {
+        if ($dn = $this->getConfig()->get('bind_dn')) {
+            $pw = Crypto::decrypt($this->getConfig()->get('bind_pw'),
+                SECRET_SALT, $this->getConfig()->getNamespace());
+            $r = $connection->bind($dn, $pw);
+            unset($pw);
+            return !PEAR::isError($r);
+        }
+        return false;
     }
 
     function authenticate($username, $password=null) {
@@ -219,21 +233,42 @@ class LDAPAuthentication extends AuthenticationBackend {
         return '2307';
     }
 
-    function supportsLookup() { return true; }
-
-    function supportsSearch() { return true; }
-    function search($query) {
+    function lookup($lookup_dn) {
         $c = $this->getConnection();
         // TODO: Include bind information
         $users = array();
-        if ($dn = $this->getConfig()->get('bind_dn')) {
-            $pw = Crypto::decrypt($this->getConfig()->get('bind_pw'),
-                SECRET_SALT, $this->getConfig()->getNamespace());
-            $r = $c->bind($dn, $pw);
-            unset($pw);
-            if (PEAR::isError($r))
-                return $users;
+        if (!$this->_bind($c))
+            return $users;
+
+        $schema = static::$schemas[$this->getSchema($c)];
+        $schema = $schema['user'];
+        $opts = array(
+            'scope'      => 'base',
+            'sizelimit'  => 1,
+            'attributes' => array_filter(flatten(array(
+                $schema['first'], $schema['last'], $schema['full'],
+                $schema['phone'], $schema['mobile'], $schema['email'],
+                $schema['username'],
+            )))
+        );
+        $r = $c->search($lookup_dn, '(objectClass=*)', $opts);
+        if ($r->count()) {
+            return $this->_getUserInfoArray($r->current(), $schema);
         }
+        else
+            return array();
+    }
+
+    function search($query) {
+        if (strlen($query) < 3)
+            return array();
+
+        $c = $this->getConnection();
+        // TODO: Include bind information
+        $users = array();
+        if (!$this->_bind($c))
+            return $users;
+
         $schema = static::$schemas[$this->getSchema($c)];
         $schema = $schema['user'];
         $r = $c->search(
@@ -242,31 +277,15 @@ class LDAPAuthentication extends AuthenticationBackend {
             array('attributes' => array_filter(flatten(array(
                 $schema['first'], $schema['last'], $schema['full'],
                 $schema['phone'], $schema['mobile'], $schema['email'],
-                $schema['username']
+                $schema['username'], 'dn',
             ))))
         );
         // XXX: Log or return some kind of error?
         if (PEAR::isError($r))
             return $users;
 
-        foreach ($r as $e) {
-            // Detect first and last name if only full name is given
-            if (!($first = $e->getValue($schema['first']))
-                    || !($last = $e->getValue($schema['last']))) {
-                $name = new PersonsName($this->_getValue($e, $schema['full']));
-                $first = $name->getFirst();
-                $last = $name->getLast();
-            }
-            $users[] = array(
-                'username' => $this->_getValue($e, $schema['username']),
-                'first' => $first,
-                'last' => $last,
-                'email' => $this->_getValue($e, $schema['email']),
-                'phone' => $this->_getValue($e, $schema['phone']),
-                'mobile' => $this->_getValue($e, $schema['mobile']),
-                'backend' => static::$id,
-            );
-        }
+        foreach ($r as $e)
+            $users[] = $this->_getUserInfoArray($e, $schema);
         return $users;
     }
 
@@ -284,6 +303,30 @@ class LDAPAuthentication extends AuthenticationBackend {
                 // Return the first non-bool-false value of the entries
                 if ($val)
                     return $val;
+    }
+
+    function _getUserInfoArray($e, $schema) {
+        // Detect first and last name if only full name is given
+        if (!($first = $e->getValue($schema['first']))
+                || !($last = $e->getValue($schema['last']))) {
+            $name = new PersonsName($this->_getValue($e, $schema['full']));
+            $first = $name->getFirst();
+            $last = $name->getLast();
+        }
+        else
+            $name = "$first $last";
+
+        return array(
+            'username' => $this->_getValue($e, $schema['username']),
+            'first' => $first,
+            'last' => $last,
+            'name' => $name,
+            'email' => $this->_getValue($e, $schema['email']),
+            'phone' => $this->_getValue($e, $schema['phone']),
+            'mobile' => $this->_getValue($e, $schema['mobile']),
+            'backend' => static::$id,
+            'id' => static::$id . ':' . $e->dn(),
+        );
     }
 
 }
