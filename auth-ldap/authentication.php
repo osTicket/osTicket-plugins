@@ -41,6 +41,7 @@ class LDAPAuthentication extends AuthenticationBackend
                 'username' => 'sAMAccountName',
                 'dn' => '{username}@{domain}',
                 'search' => '(&(objectCategory=person)(objectClass=user)(|(sAMAccountName={q}*)(firstName={q}*)(lastName={q}*)(displayName={q}*)))',
+                'lookup' => '(&(objectCategory=person)(objectClass=user)(sAMAccountName={q}))',
             ),
             'group' => array(
                 'ismember' => '(&(objectClass=user)(sAMAccountName={username})
@@ -61,6 +62,7 @@ class LDAPAuthentication extends AuthenticationBackend
                 'username' => 'uid',
                 'dn' => 'uid={username},{search_base}',
                 'search' => '(&(objectClass=posixAccount)(|(uid={q}*)(displayName={q}*)(cn={q}*)))',
+                'lookup' => '(&(objectClass=posixAccount)(uid={q}))',
             ),
         ),
     );
@@ -202,6 +204,28 @@ class LDAPAuthentication extends AuthenticationBackend
         $r = $c->bind($dn, $password);
         if (!PEAR::isError($r))
             return $this->lookupAndSync($username);
+
+        // Another effort is to search for the user
+        if (!$this->_bind($c))
+            return null;
+
+        $r = $c->search(
+            $this->getSearchBase(),
+            str_replace('{q}', $username, $schema['lookup']),
+            array('sizelimit' => 1)
+        );
+        if (PEAR::isError($r) || !$r->count())
+            return null;
+
+        // Attempt to bind as the DN of the user looked up with the password
+        // specified
+        $r = $c->bind($r->current()->dn(), $password);
+        if (PEAR::isError($r))
+            return null;
+
+        // TODO: Save the DN in the config table so a lookup isn't necessary
+        //       in the future
+        return $this->lookupAndSync($username);
     }
 
     function lookupAndSync($username) {
@@ -235,10 +259,8 @@ class LDAPAuthentication extends AuthenticationBackend
 
     function lookup($lookup_dn) {
         $c = $this->getConnection();
-        // TODO: Include bind information
-        $users = array();
         if (!$this->_bind($c))
-            return $users;
+            return null;
 
         $schema = static::$schemas[$this->getSchema($c)];
         $schema = $schema['user'];
@@ -252,11 +274,10 @@ class LDAPAuthentication extends AuthenticationBackend
             )))
         );
         $r = $c->search($lookup_dn, '(objectClass=*)', $opts);
-        if ($r->count()) {
-            return $this->_getUserInfoArray($r->current(), $schema);
-        }
-        else
-            return array();
+        if (PEAR::isError($r) || !$r->count())
+            return null;
+
+        return $this->_getUserInfoArray($r->current(), $schema);
     }
 
     function search($query) {
@@ -326,6 +347,7 @@ class LDAPAuthentication extends AuthenticationBackend
             'mobile' => $this->_getValue($e, $schema['mobile']),
             'backend' => static::$id,
             'id' => static::$id . ':' . $e->dn(),
+            'dn' => $e->dn(),
         );
     }
 
