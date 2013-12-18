@@ -16,9 +16,9 @@ class HttpAuthentication extends AuthenticationBackend {
         if ($username) {
             // Support ActiveDirectory domain specification with either
             // "user@domain" or "domain\user" formats
-            if (strpos('@', $username) !== false)
+            if (strpos($username, '@') !== false)
                 list($username, $domain) = explode('@', $username, 2);
-            elseif (strpos('\\', $username) !== false)
+            elseif (strpos($username, '\\') !== false)
                 list($domain, $username) = explode('\\', $username, 2);
             $username = trim(strtolower($username));
 
