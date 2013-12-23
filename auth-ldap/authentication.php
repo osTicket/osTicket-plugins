@@ -26,6 +26,7 @@ class LDAPAuthentication extends AuthenticationBackend
      *
      * References:
      * http://www.kouti.com/tables/userattributes.htm (AD)
+     * https://fsuid.fsu.edu/admin/lib/WinADLDAPAttributes.html (AD)
      */
     static $schemas = array(
         'msad' => array(
@@ -36,7 +37,7 @@ class LDAPAuthentication extends AuthenticationBackend
                 'last' => 'lastName',
                 'full' => 'displayName',
                 'email' => 'mail',
-                'phone' => false,
+                'phone' => 'telephoneNumber',
                 'mobile' => false,
                 'username' => 'sAMAccountName',
                 'dn' => '{username}@{domain}',
