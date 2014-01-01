@@ -112,7 +112,7 @@ class LDAPAuthentication extends AuthenticationBackend
                 || !($servers = preg_split('/\s+/', $servers))) {
             if ($domain = $this->getConfig()->get('domain')) {
                 $dns = preg_split('/,?\s+/', $this->getConfig()->get('dns'));
-                return $this->autodiscover($domain, $dns);
+                return $this->autodiscover($domain, array_filter($dns));
             }
         }
         if ($servers) {
