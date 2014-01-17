@@ -16,10 +16,7 @@ function splat($what) {
 }
 
 require_once(INCLUDE_DIR.'class.auth.php');
-abstract class LDAPAuthentication extends AuthenticationBackend
-        implements AuthDirectorySearch {
-    static $name = "Active Directory or LDAP";
-    static $id = "ldap";
+class LDAPAuthentication {
 
     /**
      * LDAP typical schema variations
@@ -276,9 +273,6 @@ abstract class LDAPAuthentication extends AuthenticationBackend
     }
 
     function search($query) {
-        if (strlen($query) < 3)
-            return array();
-
         $c = $this->getConnection();
         // TODO: Include bind information
         $users = array();
@@ -346,12 +340,6 @@ abstract class LDAPAuthentication extends AuthenticationBackend
         );
     }
 
-    abstract function lookupAndSync($username);
-
-}
-
-class StaffLDAPAuthentication extends LDAPAuthentication {
-
     function lookupAndSync($username) {
         if (($user = new StaffSession($username)) && $user->getId())
             return $user;
@@ -359,14 +347,31 @@ class StaffLDAPAuthentication extends LDAPAuthentication {
     }
 }
 
-class ClientLDAPAuthentication extends LDAPAuthentication {
+class StaffLDAPAuthentication extends StaffAuthenticationBackend
+        implements AuthDirectorySearch {
 
-    //TODO: implement once we support client logins
-    function lookupAndSync($username) {
-        return null;
+    static $name = "Active Directory or LDAP";
+    static $id = "ldap";
+
+    function __construct($config) {
+        $this->_ldap = new LDAPAuthentication($config);
+    }
+
+    function authenticate($username, $password=false, $errors=array()) {
+        return $this->_ldap->authenticate($username, $password);
+    }
+
+    function lookup($dn) {
+        return $this->_ldap->lookup($dn);
+    }
+
+    function search($query) {
+        if (strlen($query) < 3)
+            return array();
+
+        return $this->_ldap->search($query);
     }
 }
-
 
 require_once(INCLUDE_DIR.'class.plugin.php');
 require_once('config.php');
