@@ -16,7 +16,7 @@ function splat($what) {
 }
 
 require_once(INCLUDE_DIR.'class.auth.php');
-class LDAPAuthentication extends AuthenticationBackend
+abstract class LDAPAuthentication extends AuthenticationBackend
         implements AuthDirectorySearch {
     static $name = "Active Directory or LDAP";
     static $id = "ldap";
@@ -229,12 +229,6 @@ class LDAPAuthentication extends AuthenticationBackend
         return $this->lookupAndSync($username);
     }
 
-    function lookupAndSync($username) {
-        if (($user = new StaffSession($username)) && $user->getId())
-            return $user;
-        // TODO: Auto-create users, etc.
-    }
-
     /**
      * Retrieve currently configured LDAP schema, perhaps by inspecting the
      * server's advertised DSE information
@@ -352,7 +346,27 @@ class LDAPAuthentication extends AuthenticationBackend
         );
     }
 
+    abstract function lookupAndSync($username);
+
 }
+
+class StaffLDAPAuthentication extends LDAPAuthentication {
+
+    function lookupAndSync($username) {
+        if (($user = new StaffSession($username)) && $user->getId())
+            return $user;
+        // TODO: Auto-create users, etc.
+    }
+}
+
+class ClientLDAPAuthentication extends LDAPAuthentication {
+
+    //TODO: implement once we support client logins
+    function lookupAndSync($username) {
+        return null;
+    }
+}
+
 
 require_once(INCLUDE_DIR.'class.plugin.php');
 require_once('config.php');
@@ -360,7 +374,7 @@ class LdapAuthPlugin extends Plugin {
     var $config_class = 'LdapConfig';
 
     function bootstrap() {
-        AuthenticationBackend::register(new LDAPAuthentication($this->getConfig()));
+        StaffAuthenticationBackend::register(new StaffLDAPAuthentication($this->getConfig()));
     }
 }
 
