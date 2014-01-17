@@ -334,8 +334,6 @@ class LDAPAuthentication {
             'email' => $this->_getValue($e, $schema['email']),
             'phone' => $this->_getValue($e, $schema['phone']),
             'mobile' => $this->_getValue($e, $schema['mobile']),
-            'backend' => static::$id,
-            'id' => static::$id . ':' . $e->dn(),
             'dn' => $e->dn(),
         );
     }
@@ -362,14 +360,24 @@ class StaffLDAPAuthentication extends StaffAuthenticationBackend
     }
 
     function lookup($dn) {
-        return $this->_ldap->lookup($dn);
+        $hit =  $this->_ldap->lookup($dn);
+        if ($hit) {
+            $hit['backend'] = static::$id;
+            $hit['id'] = static::$id . ':' . $hit['dn'];
+        }
+        return $hit;
     }
 
     function search($query) {
         if (strlen($query) < 3)
             return array();
 
-        return $this->_ldap->search($query);
+        $hits = $this->_ldap->search($query);
+        foreach ($hits as &$h) {
+            $h['backend'] = static::$id;
+            $h['id'] = static::$id . ':' . $h['dn'];
+        }
+        return $hits;
     }
 }
 
