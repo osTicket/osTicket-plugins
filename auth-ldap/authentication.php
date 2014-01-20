@@ -16,10 +16,7 @@ function splat($what) {
 }
 
 require_once(INCLUDE_DIR.'class.auth.php');
-class LDAPAuthentication extends AuthenticationBackend
-        implements AuthDirectorySearch {
-    static $name = "Active Directory or LDAP";
-    static $id = "ldap";
+class LDAPAuthentication {
 
     /**
      * LDAP typical schema variations
@@ -229,12 +226,6 @@ class LDAPAuthentication extends AuthenticationBackend
         return $this->lookupAndSync($username);
     }
 
-    function lookupAndSync($username) {
-        if (($user = new StaffSession($username)) && $user->getId())
-            return $user;
-        // TODO: Auto-create users, etc.
-    }
-
     /**
      * Retrieve currently configured LDAP schema, perhaps by inspecting the
      * server's advertised DSE information
@@ -282,9 +273,6 @@ class LDAPAuthentication extends AuthenticationBackend
     }
 
     function search($query) {
-        if (strlen($query) < 3)
-            return array();
-
         $c = $this->getConnection();
         // TODO: Include bind information
         $users = array();
@@ -346,12 +334,51 @@ class LDAPAuthentication extends AuthenticationBackend
             'email' => $this->_getValue($e, $schema['email']),
             'phone' => $this->_getValue($e, $schema['phone']),
             'mobile' => $this->_getValue($e, $schema['mobile']),
-            'backend' => static::$id,
-            'id' => static::$id . ':' . $e->dn(),
             'dn' => $e->dn(),
         );
     }
 
+    function lookupAndSync($username) {
+        if (($user = new StaffSession($username)) && $user->getId())
+            return $user;
+        // TODO: Auto-create users, etc.
+    }
+}
+
+class StaffLDAPAuthentication extends StaffAuthenticationBackend
+        implements AuthDirectorySearch {
+
+    static $name = "Active Directory or LDAP";
+    static $id = "ldap";
+
+    function __construct($config) {
+        $this->_ldap = new LDAPAuthentication($config);
+    }
+
+    function authenticate($username, $password=false, $errors=array()) {
+        return $this->_ldap->authenticate($username, $password);
+    }
+
+    function lookup($dn) {
+        $hit =  $this->_ldap->lookup($dn);
+        if ($hit) {
+            $hit['backend'] = static::$id;
+            $hit['id'] = static::$id . ':' . $hit['dn'];
+        }
+        return $hit;
+    }
+
+    function search($query) {
+        if (strlen($query) < 3)
+            return array();
+
+        $hits = $this->_ldap->search($query);
+        foreach ($hits as &$h) {
+            $h['backend'] = static::$id;
+            $h['id'] = static::$id . ':' . $h['dn'];
+        }
+        return $hits;
+    }
 }
 
 require_once(INCLUDE_DIR.'class.plugin.php');
@@ -360,7 +387,7 @@ class LdapAuthPlugin extends Plugin {
     var $config_class = 'LdapConfig';
 
     function bootstrap() {
-        AuthenticationBackend::register(new LDAPAuthentication($this->getConfig()));
+        StaffAuthenticationBackend::register(new StaffLDAPAuthentication($this->getConfig()));
     }
 }
 

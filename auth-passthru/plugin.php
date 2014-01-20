@@ -1,7 +1,7 @@
 <?php
 
 require_once(INCLUDE_DIR.'class.auth.php');
-class HttpAuthentication extends AuthenticationBackend {
+class HttpAuthentication extends StaffAuthenticationBackend {
     static $name = "HTTP Authentication";
     static $id = "passthru";
 
@@ -32,7 +32,7 @@ class HttpAuthentication extends AuthenticationBackend {
 
 class PassthruAuthPlugin extends Plugin {
     function bootstrap() {
-        AuthenticationBackend::register('HttpAuthentication');
+        StaffAuthenticationBackend::register('HttpAuthentication');
     }
 }
 
