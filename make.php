@@ -312,7 +312,27 @@ class PluginBuilder extends Module {
             $phar->setSignatureAlgorithm(Phar::OPENSSL, $pkey);
         }
 
+        // Read plugin info
+        $info = (include "$plugin/plugin.php");
+
         $phar->buildFromDirectory($plugin);
+
+        // Add library dependencies
+        if (isset($info['includes'])) {
+            $includes = array();
+            foreach ($info['includes'] as $local => $lib) {
+                $lib = trim($lib, '/').'/';
+                $full = rtrim(realpath($local),'/').'/';
+                $files = new RecursiveIteratorIterator(
+                    new RecursiveDirectoryIterator($full),
+                    RecursiveIteratorIterator::SELF_FIRST);
+                foreach ($files as $f) {
+                    $includes[str_replace($full, $lib, $f->getPathname())]
+                        = $f->getPathname();
+                }
+            }
+            $phar->buildFromIterator(new ArrayIterator($includes));
+        }
         $phar->setStub('<?php __HALT_COMPILER(); ?>'); # <?php # 4vim
     }
 }
