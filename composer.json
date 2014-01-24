@@ -1,0 +1,17 @@
+{
+    "name": "osTicket/core-plugins",
+    "repositories": [
+        {
+            "type": "pear",
+            "url": "http://pear.php.net"
+        }
+    ],
+    "require": {
+        "symfony/class-loader": "*",
+        "aws/aws-sdk-php": "2.*",
+        "pear-pear/Net_LDAP2": "*"
+    },
+    "config": {
+        "vendor-dir": "lib"
+    }
+}

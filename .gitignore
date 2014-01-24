@@ -8,3 +8,10 @@ Vagrantfile
 
 # Staging directory used for packaging script
 stage
+
+# Ignore compiled phar files
+*.phar
+
+# Ignore installed dependencies and composer if placed here
+lib/
+composer.phar
