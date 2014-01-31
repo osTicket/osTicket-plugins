@@ -53,7 +53,7 @@ class LdapConfig extends PluginConfig {
                 'label' => 'Search User',
                 'hint' => 'Bind DN (distinguised name) to bind to the LDAP
                     server as in order to perform searches',
-                'configuration' => array('size'=>40, 'length'=>80),
+                'configuration' => array('size'=>40, 'length'=>120),
             )),
             'bind_pw' => new TextboxField(array(
                 'widget' => 'PasswordWidget',
@@ -64,7 +64,7 @@ class LdapConfig extends PluginConfig {
             'search_base' => new TextboxField(array(
                 'label' => 'Search Base',
                 'hint' => 'Used when searching for users',
-                'configuration' => array('size'=>70, 'length'=>80),
+                'configuration' => array('size'=>70, 'length'=>120),
             )),
             'schema' => new ChoiceField(array(
                 'label' => 'LDAP Schema',
