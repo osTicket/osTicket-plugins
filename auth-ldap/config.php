@@ -15,6 +15,12 @@ class LdapConfig extends PluginConfig {
                 'label' => 'Default Domain',
                 'hint' => 'Default domain used in authentication and searches',
                 'configuration' => array('size'=>40),
+                'validators' => array(
+                function($self, $val) {
+                    if (strpos($val, '.') === false)
+                        $self->addError(
+                            'Fully-qualified domain name is expected');
+                }),
             )),
             'dns' => new TextboxField(array(
                 'label' => 'DNS Servers',
