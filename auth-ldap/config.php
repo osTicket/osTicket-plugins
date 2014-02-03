@@ -29,6 +29,15 @@ class LdapConfig extends PluginConfig {
                     this web server or does not have its DNS configured to
                     point to the AD servers',
                 'configuration' => array('size'=>40),
+                'validators' => array(
+                function($self, $val) {
+                    if (!$val) return;
+                    $servers = explode(',', $val);
+                    foreach ($servers as $s) {
+                        if (!Validator::is_ip(trim($s)))
+                            $self->addError($s.': Expected an IP address');
+                    }
+                }),
             )),
 
             'ldap' => new SectionBreakField(array(
