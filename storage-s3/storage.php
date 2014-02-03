@@ -13,7 +13,7 @@ class S3StorageBackend extends FileStorageBackend {
     static $__config;
     private $body;
 
-    var $blocksize = 131072;
+    static $blocksize = 8192; # Default read size for sockets
 
     static function setConfig($config) {
         static::$config = $config->getInfo();
@@ -40,7 +40,16 @@ class S3StorageBackend extends FileStorageBackend {
         try {
             if (!$this->body)
                 $this->openReadStream();
-            return $this->body->read($bytes ?: $this->blocksize);
+            // Reads may be cut short to 8k. Try to read $bytes if at all
+            // possible.
+            $chunk = '';
+            $bytes = $bytes ?: self::getBlockSize();
+            while (strlen($chunk) < $bytes) {
+                $buf = $this->body->read($bytes - strlen($chunk));
+                if (!$buf) break;
+                $chunk .= $buf;
+            }
+            return $chunk;
         }
         catch (Aws\S3\Exception\NoSuchKeyException $e) {
             throw new IOException($this->meta->getKey()
