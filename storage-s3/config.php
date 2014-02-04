@@ -86,6 +86,8 @@ class S3StoragePluginConfig extends PluginConfig {
         if (!$errors && $config['secret-access-key'])
             $config['secret-access-key'] = Crypto::encrypt($config['secret-access-key'],
                 SECRET_SALT, $this->getNamespace());
+        else
+            $config['secret-access-key'] = $this->get('secret-access-key');
 
         return true;
     }
