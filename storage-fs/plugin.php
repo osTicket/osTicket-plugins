@@ -78,6 +78,10 @@ class FilesystemStorage extends FileStorageBackend {
 class FsStoragePluginConfig extends PluginConfig {
     function getOptions() {
         return array(
+            'desc' => new SectionBreakField(array(
+                'label' => 'File System',
+                'hint' => 'Once enabled and configured please change the storage backend in Admin Panel -> Settings -> Attachments',
+            )),
             'uploadpath' => new TextboxField(array(
                 'label'=>'Base folder for attachment files',
                 'hint'=>'The path must already exist and be writeable by the
