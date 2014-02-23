@@ -84,7 +84,7 @@ class FsStoragePluginConfig extends PluginConfig {
                     web server. If the path starts with neither a `/` or a
                     drive letter, the path will be assumed to be relative to
                     the root of osTicket',
-                'configuration'=>array('size'=>40),
+                'configuration'=>array('size'=>40, 'length'=>120),
                 'required'=>true,
             )),
         );
