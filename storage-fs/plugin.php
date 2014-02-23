@@ -78,13 +78,17 @@ class FilesystemStorage extends FileStorageBackend {
 class FsStoragePluginConfig extends PluginConfig {
     function getOptions() {
         return array(
+            'desc' => new SectionBreakField(array(
+                'label' => 'File System',
+                'hint' => 'Once enabled and configured please change the storage backend in Admin Panel -> Settings -> Attachments',
+            )),
             'uploadpath' => new TextboxField(array(
                 'label'=>'Base folder for attachment files',
                 'hint'=>'The path must already exist and be writeable by the
                     web server. If the path starts with neither a `/` or a
                     drive letter, the path will be assumed to be relative to
                     the root of osTicket',
-                'configuration'=>array('size'=>40),
+                'configuration'=>array('size'=>120, 'length'=>120),
                 'required'=>true,
             )),
         );
