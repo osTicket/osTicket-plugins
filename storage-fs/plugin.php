@@ -10,7 +10,7 @@ class FilesystemStorage extends FileStorageBackend {
     var $fp = null;
     static $base;
 
-    function read($bytes=32768, $offset=false) {
+    function read($bytes=false, $offset=false) {
         $hash = $this->meta->getKey();
         $filename = $this->getPath($hash);
         if (!$this->fp)
@@ -19,7 +19,7 @@ class FilesystemStorage extends FileStorageBackend {
             throw new IOException($filename.': Unable to open for reading');
         if ($offset)
             fseek($this->fp, $offset);
-        if (($status = @fread($this->fp, $bytes)) === false)
+        if (($status = @fread($this->fp, $bytes ?: self::getBlocksize())) === false)
             throw new IOException($filename.': Unable to read from file');
         return $status;
     }
