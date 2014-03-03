@@ -39,7 +39,7 @@ class FilesystemStorage extends FileStorageBackend {
         if (!$this->fp)
             $this->fp = @fopen($filename, 'wb');
         if (!$this->fp)
-            throw new IOException($filename.':Unable to open for reading');
+            throw new IOException($filename.': Unable to open for reading');
         if (($status = @fwrite($this->fp, $data)) === false)
             throw new IOException($filename.': Unable to write to file');
         return $status;
@@ -130,7 +130,7 @@ class FsStoragePlugin extends Plugin {
 
 return array(
     'id' =>             'storage:fs', # notrans
-    'version' =>        '0.1',
+    'version' =>        '0.2',
     'name' =>           'Attachments on the filesystem',
     'author' =>         'Jared Hancock',
     'description' =>    'Enables storing attachments on the filesystem',
