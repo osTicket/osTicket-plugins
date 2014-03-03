@@ -2,7 +2,7 @@
 
 return array(
     'id' =>             'auth:ldap', # notrans
-    'version' =>        '0.3',
+    'version' =>        '0.4',
     'name' =>           'LDAP Authentication and Lookup',
     'author' =>         'Jared Hancock',
     'description' =>    'Provides a configurable authentication backend

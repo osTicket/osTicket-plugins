@@ -14,7 +14,7 @@ class LdapConfig extends PluginConfig {
             'domain' => new TextboxField(array(
                 'label' => 'Default Domain',
                 'hint' => 'Default domain used in authentication and searches',
-                'configuration' => array('size'=>40),
+                'configuration' => array('size'=>40, 'length'=>60),
                 'validators' => array(
                 function($self, $val) {
                     if (strpos($val, '.') === false)
