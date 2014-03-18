@@ -10,9 +10,13 @@ return array(
         servers',
     'url' =>            'http://www.osticket.com/plugins/auth/ldap',
     'plugin' =>         'authentication.php:LdapAuthPlugin',
-    'includes' => array(
-        # Install (into the PHAR) PEAR Net_LDAP2 into include/
-        'lib/pear-pear.php.net/Net_LDAP2' => 'include',
+    'requires' => array(
+        "pear-pear/Net_LDAP2" => array(
+            "version" => "*",
+            "map" => array(
+                'pear-pear.php.net/Net_LDAP2' => 'include',
+            ),
+        ),
     ),
 );
 

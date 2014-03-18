@@ -7,12 +7,22 @@ return array(
     'author' =>         'Jared Hancock',
     'description' =>    'Enables storing attachments in Amazon S3',
     'url' =>            'http://www.osticket.com/plugins/storage-s3',
-    'includes' => array(
-        'lib/aws/aws-sdk-php/src/Aws/S3' => 'lib/Aws/S3',
-        'lib/aws/aws-sdk-php/src/Aws/Common' => 'lib/Aws/Common',
-        'lib/symfony/event-dispatcher/Symfony' => 'lib/Symfony',
-        'lib/symfony/class-loader/Symfony' => 'lib/Symfony',
-        'lib/guzzle/guzzle/src/Guzzle' => 'lib/Guzzle',
+    'requires' => array(
+        "symfony/class-loader" => array(
+            'version' => "*",
+            'map' => array(
+                'symfony/class-loader/Symfony' => 'lib/Symfony',
+            ),
+        ),
+        "aws/aws-sdk-php" => array(
+            'version' => "2.*",
+            'map' => array(
+                'aws/aws-sdk-php/src/Aws/S3' => 'lib/Aws/S3',
+                'aws/aws-sdk-php/src/Aws/Common' => 'lib/Aws/Common',
+                'symfony/event-dispatcher/Symfony' => 'lib/Symfony',
+                'guzzle/guzzle/src/Guzzle' => 'lib/Guzzle',
+            ),
+        ),
     ),
     'plugin' =>         'storage.php:S3StoragePlugin'
 );

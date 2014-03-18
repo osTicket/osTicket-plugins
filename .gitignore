@@ -15,3 +15,5 @@ stage
 # Ignore installed dependencies and composer if placed here
 lib/
 composer.phar
+composer.lock
+composer.json
