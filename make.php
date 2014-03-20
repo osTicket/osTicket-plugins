@@ -350,7 +350,7 @@ class PluginBuilder extends Module {
         // Read plugin info
         $info = (include "$plugin/plugin.php");
 
-        //$this->resolveDependencies();
+        $this->resolveDependencies(false);
 
         $phar->buildFromDirectory($plugin);
 
@@ -447,7 +447,7 @@ class PluginBuilder extends Module {
         fclose($fp);
     }
 
-    function resolveDependencies() {
+    function resolveDependencies($autoupdate=true) {
         // Build dependency list
         $requires = array();
         foreach (glob(dirname(__file__).'/*/plugin.php') as $plugin) {
@@ -484,8 +484,10 @@ EOF;
         $this->ensureComposer();
 
         $php = defined('PHP_BINARY') ? PHP_BINARY : 'php';
-        if (file_exists(dirname(__file__)."/composer.lock"))
-            passthru($php." ".dirname(__file__)."/composer.phar -v update");
+        if (file_exists(dirname(__file__)."/composer.lock")) {
+            if ($autoupdate)
+                passthru($php." ".dirname(__file__)."/composer.phar -v update");
+        }
         else
             passthru($php." ".dirname(__file__)."/composer.phar -v install");
     }
