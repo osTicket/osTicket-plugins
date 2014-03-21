@@ -388,6 +388,7 @@ class LdapAuthPlugin extends Plugin {
 
     function bootstrap() {
         StaffAuthenticationBackend::register(new StaffLDAPAuthentication($this->getConfig()));
+        set_include_path(get_include_path().':'.dirname(__file__).'/include');
     }
 }
 

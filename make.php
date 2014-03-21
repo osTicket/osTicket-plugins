@@ -156,9 +156,18 @@ class Module {
 
         if ($this->arguments) {
             echo "\nArguments:\n";
-            foreach ($this->arguments as $name=>$help)
+            foreach ($this->arguments as $name=>$help) {
+                $extra = '';
+                if (isset($help['options']) && is_array($help['options'])) {
+                    foreach($help['options'] as $op=>$desc)
+                        $extra .= wordwrap(
+                            "\n        $op - $desc", 76, "\n            ");
+                }
+                $help = $help['help'];
                 echo $name . "\n    " . wordwrap(
-                    preg_replace('/\s+/', ' ', $help), 76, "\n    ")."\n";
+                    preg_replace('/\s+/', ' ', $help), 76, "\n    ")
+                        .$extra."\n";
+            }
         }
 
         if ($this->epilog) {
@@ -202,11 +211,23 @@ class Module {
         list($this->_options, $this->_args) =
             $this->parseArgs(array_slice($argv, 1));
 
-        foreach (array_keys($this->arguments) as $idx=>$name)
-            if (!isset($this->_args[$idx]))
+        foreach (array_keys($this->arguments) as $idx=>$name) {
+            if (!is_array($this->arguments[$name]))
+                $this->arguments[$name] = array(
+                    'help' => $this->arguments[$name]);
+            $this->arguments[$name]['idx'] = $idx;
+        }
+
+        foreach ($this->arguments as $name=>$info) {
+            if (!isset($this->_args[$info['idx']])) {
+                if (isset($info['required']) && !$info['required'])
+                    continue;
                 $this->optionError($name . " is a required argument");
-            else
-                $this->_args[$name] = &$this->_args[$idx];
+            }
+            else {
+                $this->_args[$name] = &$this->_args[$info['idx']];
+            }
+        }
 
         foreach ($this->options as $name=>$opt)
             if (!isset($this->_options[$name]))
@@ -273,25 +294,39 @@ class PluginBuilder extends Module {
         "Inspects, tests, and builds a plugin PHAR file";
 
     var $arguments = array(
-        'action' => "What to do with the plugin",
-        'plugin' => "Plugin to be compiled",
+        'action' => array(
+            'help' => "What to do with the plugin",
+            'options' => array(
+                'build' => 'Compile a PHAR file for a plugin',
+                'hydrate' => 'Prep plugin folders for embedding in osTicket directly',
+            ),
+        ),
+        'plugin' => array(
+            'help' => "Plugin to be compiled",
+            'required' => false
+        ),
     );
 
     var $options = array(
         'sign' => array('-S','--sign', 'metavar'=>'KEY', 'help'=>
             'Sign the compiled PHAR file with the provided OpenSSL private
             key file'),
+        'verbose' => array('-v','--verbose','help'=>
+            'Be more verbose','default'=>false, 'action'=>'store_true'),
     );
 
     function run($args, $options) {
-        $plugin = $args['plugin'];
-
-        if (!file_exists($plugin))
-            $this->fail("Plugin folder '$plugin' does not exist");
-
         switch (strtolower($args['action'])) {
         case 'build':
+            $plugin = $args['plugin'];
+
+            if (!file_exists($plugin))
+                $this->fail("Plugin folder '$plugin' does not exist");
+
             $this->_build($plugin, $options);
+            break;
+        case 'hydrate':
+            $this->_hydrate();
             break;
         default:
             $this->fail("Unsupported MAKE action. See help");
@@ -312,8 +347,149 @@ class PluginBuilder extends Module {
             $phar->setSignatureAlgorithm(Phar::OPENSSL, $pkey);
         }
 
+        // Read plugin info
+        $info = (include "$plugin/plugin.php");
+
+        $this->resolveDependencies(false);
+
         $phar->buildFromDirectory($plugin);
+
+        // Add library dependencies
+        if (isset($info['requires'])) {
+            $includes = array();
+            foreach ($info['requires'] as $lib=>$info) {
+                if (!isset($info['map']))
+                    continue;
+                foreach ($info['map'] as $lib=>$local) {
+                    $phar_path = trim($local, '/').'/';
+                    $full = rtrim(dirname(__file__).'/lib/'.$lib,'/').'/';
+                    $files = new RecursiveIteratorIterator(
+                        new RecursiveDirectoryIterator($full),
+                        RecursiveIteratorIterator::SELF_FIRST);
+                    foreach ($files as $f) {
+                        $includes[str_replace($full, $phar_path, $f->getPathname())]
+                            = $f->getPathname();
+                    }
+                }
+            }
+            $phar->buildFromIterator(new ArrayIterator($includes));
+        }
         $phar->setStub('<?php __HALT_COMPILER(); ?>'); # <?php # 4vim
+    }
+
+    function _hydrate() {
+        $this->resolveDependencies();
+
+        // Move things into place
+        foreach (glob(dirname(__file__).'/*/plugin.php') as $plugin) {
+            $p = (include $plugin);
+            if (!isset($p['requires']) || !is_array($p['requires']))
+                continue;
+            foreach ($p['requires'] as $lib=>$info) {
+                if (!isset($info['map']) || !is_array($info['map']))
+                    continue;
+                foreach ($info['map'] as $lib=>$local) {
+                    $source = dirname(__file__).'/lib/'.$lib;
+                    $dest = dirname($plugin).'/'.$local;
+                    if ($this->options['verbose']) {
+                        $left = str_replace(dirname(__file__).'/', '', $source);
+                        $right = str_replace(dirname(__file__).'/', '', $dest);
+                        $this->stdout->write("Hydrating :: $left => $right\n");
+                    }
+                    foreach (
+                        $iterator = new RecursiveIteratorIterator(
+                            new RecursiveDirectoryIterator($source, RecursiveDirectoryIterator::SKIP_DOTS),
+                                RecursiveIteratorIterator::SELF_FIRST) as $item
+                    ) {
+                        if ($item->isDir())
+                            continue;
+
+                        $target = $dest . DIRECTORY_SEPARATOR . $iterator->getSubPathName();
+                        $parent = dirname($target);
+                        if (!file_exists($parent))
+                            mkdir($parent, 0777, true);
+                        copy($item, $target);
+                    }
+                }
+            }
+        }
+    }
+
+    function _http_get($url) {
+        #curl post
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'osTicket-cli');
+        curl_setopt($ch, CURLOPT_HEADER, FALSE);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, FALSE);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+        $result=curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        return array($code, $result);
+    }
+
+    function ensureComposer() {
+        if (file_exists(dirname(__file__).'/composer.phar'))
+            return true;
+
+        return static::getComposer();
+    }
+
+    function getComposer() {
+        list($code, $phar) = $this->_http_get('https://getcomposer.org/composer.phar');
+
+        if (!($fp = fopen(dirname(__file__).'/composer.phar', 'wb')))
+            $this->fail('Cannot install composer: Unable to write "composer.phar"');
+
+        fwrite($fp, $phar);
+        fclose($fp);
+    }
+
+    function resolveDependencies($autoupdate=true) {
+        // Build dependency list
+        $requires = array();
+        foreach (glob(dirname(__file__).'/*/plugin.php') as $plugin) {
+            $p = (include $plugin);
+            if (isset($p['requires']))
+                foreach ($p['requires'] as $lib=>$info)
+                    $requires[$lib] = $info['version'];
+        }
+
+        // Write composer.json file
+        $composer = <<<EOF
+{
+    "name": "osTicket/core-plugins",
+    "repositories": [
+        {
+            "type": "pear",
+            "url": "http://pear.php.net"
+        }
+    ],
+    "require": %s,
+    "config": {
+        "vendor-dir": "lib"
+    }
+}
+EOF;
+        $composer = sprintf($composer, json_encode($requires));
+
+        if (!($fp = fopen('composer.json', 'w')))
+            $this->fail('Unable to save "composer.json"');
+
+        fwrite($fp, $composer);
+        fclose($fp);
+
+        $this->ensureComposer();
+
+        $php = defined('PHP_BINARY') ? PHP_BINARY : 'php';
+        if (file_exists(dirname(__file__)."/composer.lock")) {
+            if ($autoupdate)
+                passthru($php." ".dirname(__file__)."/composer.phar -v update");
+        }
+        else
+            passthru($php." ".dirname(__file__)."/composer.phar -v install");
     }
 }
 $registered_modules = array();
@@ -326,4 +502,3 @@ $builder->parseOptions();
 $builder->_run(basename(__file__));
 
 ?>
-
