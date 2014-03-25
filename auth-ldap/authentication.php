@@ -66,9 +66,11 @@ class LDAPAuthentication {
     );
 
     var $config;
+    var $type = 'staff';
 
-    function __construct($config) {
+    function __construct($config, $type='staff') {
         $this->config = $config;
+        $this->type = $type;
     }
     function getConfig() {
         return $this->config;
@@ -120,7 +122,12 @@ class LDAPAuthentication {
         }
     }
 
-    function getConnection() {
+    function getConnection($force_reconnect=false) {
+        static $connection = null;
+
+        if ($connection && !$force_reconnect)
+            return $connection;
+
         require_once('include/Net/LDAP2.php');
         // Set reasonable timeout limits
         $defaults = array(
@@ -146,8 +153,10 @@ class LDAPAuthentication {
             $params = $defaults + $s;
             $c = new Net_LDAP2($params);
             $r = $c->bind();
-            if (!PEAR::isError($r))
+            if (!PEAR::isError($r)) {
+                $connection = $c;
                 return $c;
+            }
         }
     }
 
@@ -201,7 +210,7 @@ class LDAPAuthentication {
         );
         $r = $c->bind($dn, $password);
         if (!PEAR::isError($r))
-            return $this->lookupAndSync($username);
+            return $this->lookupAndSync($username, $dn);
 
         // Another effort is to search for the user
         if (!$this->_bind($c))
@@ -223,7 +232,7 @@ class LDAPAuthentication {
 
         // TODO: Save the DN in the config table so a lookup isn't necessary
         //       in the future
-        return $this->lookupAndSync($username);
+        return $this->lookupAndSync($username, $r->current()->dn());
     }
 
     /**
@@ -249,9 +258,9 @@ class LDAPAuthentication {
         return '2307';
     }
 
-    function lookup($lookup_dn) {
+    function lookup($lookup_dn, $bind=true) {
         $c = $this->getConnection();
-        if (!$this->_bind($c))
+        if ($bind && !$this->_bind($c))
             return null;
 
         $schema = static::$schemas[$this->getSchema($c)];
@@ -338,9 +347,34 @@ class LDAPAuthentication {
         );
     }
 
-    function lookupAndSync($username) {
-        if (($user = new StaffSession($username)) && $user->getId())
-            return $user;
+    function lookupAndSync($username, $dn) {
+        switch ($this->type) {
+        case 'staff':
+            if (($user = new StaffSession($username)) && $user->getId())
+                return $user;
+            break;
+        case 'client':
+            // Lookup all the information on the user. Try to get the email
+            // addresss as well as the username when looking up the user
+            // locally.
+            if (!($info = $this->lookup($dn, false)))
+                return;
+
+            $acct = false;
+            foreach (array($username, $info['username'], $info['email']) as $name) {
+                if ($acct = ClientAccount::lookupByUsername($name))
+                    break;
+            }
+            if (!$acct)
+                return;
+
+            if (($client = new ClientSession(new EndUser($acct->getUser())))
+                    && !$client->getId())
+                return;
+
+            return $client;
+        }
+
         // TODO: Auto-create users, etc.
     }
 }
@@ -381,13 +415,31 @@ class StaffLDAPAuthentication extends StaffAuthenticationBackend
     }
 }
 
+class ClientLDAPAuthentication extends UserAuthenticationBackend {
+    static $name = "Active Directory or LDAP";
+    static $id = "ldap.client";
+
+    function __construct($config) {
+        $this->_ldap = new LDAPAuthentication($config, 'client');
+    }
+
+    function authenticate($username, $password=false, $errors=array()) {
+        return $this->_ldap->authenticate($username, $password);
+    }
+}
+
 require_once(INCLUDE_DIR.'class.plugin.php');
 require_once('config.php');
 class LdapAuthPlugin extends Plugin {
     var $config_class = 'LdapConfig';
 
     function bootstrap() {
-        StaffAuthenticationBackend::register(new StaffLDAPAuthentication($this->getConfig()));
+        $config = $this->getConfig();
+        if ($config->get('auth-staff'))
+            StaffAuthenticationBackend::register(new StaffLDAPAuthentication($config));
+        if ($config->get('auth-client'))
+            UserAuthenticationBackend::register(new ClientLDAPAuthentication($config));
+
         set_include_path(get_include_path().':'.dirname(__file__).'/include');
     }
 }

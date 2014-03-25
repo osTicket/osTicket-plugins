@@ -91,6 +91,27 @@ class LdapConfig extends PluginConfig {
                     '2307' => 'Posix Account',
                 ),
             )),
+
+            'auth' => new SectionBreakField(array(
+                'label' => 'Authentication Modes',
+                'hint' => 'Accounts must be created locally for both clients and staff before they can be authenticated',
+                'hint' => 'Authentication modes for clients and staff
+                    members can be enabled independently',
+            )),
+            'auth-staff' => new BooleanField(array(
+                'label' => 'Staff Authentication',
+                'default' => true,
+                'configuration' => array(
+                    'desc' => 'Enable authentication of staff members'
+                )
+            )),
+            'auth-client' => new BooleanField(array(
+                'label' => 'Client Authentication',
+                'default' => false,
+                'configuration' => array(
+                    'desc' => 'Enable authentication of clients'
+                )
+            )),
         );
     }
 
