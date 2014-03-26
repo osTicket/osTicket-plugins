@@ -366,7 +366,7 @@ class LDAPAuthentication {
                     break;
             }
             if (!$acct)
-                return;
+                return new ClientCreateRequest($this, $username, $info);
 
             if (($client = new ClientSession(new EndUser($acct->getUser())))
                     && !$client->getId())
@@ -421,10 +421,15 @@ class ClientLDAPAuthentication extends UserAuthenticationBackend {
 
     function __construct($config) {
         $this->_ldap = new LDAPAuthentication($config, 'client');
+        if ($domain = $config->get('domain'))
+            self::$name .= sprintf(' (%s)', $domain);
     }
 
     function authenticate($username, $password=false, $errors=array()) {
-        return $this->_ldap->authenticate($username, $password);
+        $object = $this->_ldap->authenticate($username, $password);
+        if ($object instanceof ClientCreateRequest)
+            $object->setBackend($this);
+        return $object;
     }
 }
 
