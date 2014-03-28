@@ -299,6 +299,7 @@ class PluginBuilder extends Module {
             'options' => array(
                 'build' => 'Compile a PHAR file for a plugin',
                 'hydrate' => 'Prep plugin folders for embedding in osTicket directly',
+                'sign' => 'Emit a signature for a compiled PHAR plugin',
             ),
         ),
         'plugin' => array(
@@ -325,6 +326,9 @@ class PluginBuilder extends Module {
 
             $this->_build($plugin, $options);
             break;
+        case 'sign':
+            $this->_sign($args['plugin'], $options);
+            break;
         case 'hydrate':
             $this->_hydrate();
             break;
@@ -337,16 +341,6 @@ class PluginBuilder extends Module {
         @unlink("$plugin.phar");
         $phar = new Phar("$plugin.phar");
 
-        if ($options['sign']) {
-            if (!function_exists('openssl_get_privatekey'))
-                $this->fail('OpenSSL extension required for signing');
-            $private = openssl_get_privatekey(
-                    file_get_contents($options['sign']));
-            $pkey = '';
-            openssl_pkey_export($private, $pkey);
-            $phar->setSignatureAlgorithm(Phar::OPENSSL, $pkey);
-        }
-
         // Read plugin info
         $info = (include "$plugin/plugin.php");
 
@@ -357,10 +351,10 @@ class PluginBuilder extends Module {
         // Add library dependencies
         if (isset($info['requires'])) {
             $includes = array();
-            foreach ($info['requires'] as $lib=>$info) {
-                if (!isset($info['map']))
+            foreach ($info['requires'] as $lib=>$nfo) {
+                if (!isset($nfo['map']))
                     continue;
-                foreach ($info['map'] as $lib=>$local) {
+                foreach ($nfo['map'] as $lib=>$local) {
                     $phar_path = trim($local, '/').'/';
                     $full = rtrim(dirname(__file__).'/lib/'.$lib,'/').'/';
                     $files = new RecursiveIteratorIterator(
@@ -374,7 +368,36 @@ class PluginBuilder extends Module {
             }
             $phar->buildFromIterator(new ArrayIterator($includes));
         }
-        $phar->setStub('<?php __HALT_COMPILER(); ?>'); # <?php # 4vim
+        $phar->setStub('<?php __HALT_COMPILER();');
+        $phar->setSignatureAlgorithm(Phar::SHA1);
+    }
+
+    function _sign($plugin, $options) {
+        if (!file_exists($plugin))
+            $this->fail($plugin.': Cannot find file');
+        elseif (!file_exists("phar://$plugin/plugin.php"))
+            $this->fail($plugin.': Should be a plugin PHAR file');
+        $info = (include "phar://$plugin/plugin.php");
+        $phar = new Phar($plugin);
+
+        if (!function_exists('openssl_get_privatekey'))
+            $this->fail('OpenSSL extension required for signing');
+        $private = openssl_get_privatekey(
+                file_get_contents($options['sign']));
+        if (!$private)
+            $this->fail('Unable to read private key');
+        $signature = $phar->getSignature();
+        $seal = '';
+        openssl_sign($signature['hash'], $seal, $private,
+            OPENSSL_ALGO_SHA1);
+        if (!$seal)
+            $this->fail('Unable to generate verify signature');
+
+        $this->stdout->write(sprintf("Signature: %s\n",
+            strtolower($signature['hash'])));
+        $this->stdout->write(
+            sprintf("Seal: \"v=1; i=%s; s=%s; V=%s;\"\n",
+            $info['id'], base64_encode($seal), $info['version']));
     }
 
     function _hydrate() {
