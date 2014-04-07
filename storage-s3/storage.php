@@ -12,6 +12,8 @@ class S3StorageBackend extends FileStorageBackend {
     static $config;
     static $__config;
     private $body;
+    private $upload_hash;
+    private $upload_hash_final;
 
     static $blocksize = 8192; # Default read size for sockets
 
@@ -74,6 +76,9 @@ class S3StorageBackend extends FileStorageBackend {
     function write($block) {
         if (!$this->body)
             $this->openWriteStream();
+        if (!isset($this->upload_hash))
+            $this->upload_hash = hash_init('md5');
+        hash_update($this->upload_hash, $block);
         return $this->body->write($block);
     }
 
@@ -82,21 +87,32 @@ class S3StorageBackend extends FileStorageBackend {
     }
 
     function upload($filepath) {
-        if ($filepath instanceof EntityBody)
+        if ($filepath instanceof EntityBody) {
             $filepath->rewind();
-        elseif (is_string($filepath))
+            // Hashing already performed in the ::write() method
+        }
+        elseif (is_string($filepath)) {
             $filepath = fopen($filepath, 'r');
+            $this->upload_hash = hash_init('md5');
+            hash_update_file($this->upload_hash, $filepath);
+            rewind($filepath);
+        }
 
         try {
-            $this->client->upload(
+            $params = array(
+                'ContentType' => $this->meta->getType(),
+                'CacheControl' => 'private, max-age=86400',
+            );
+            if (isset($this->upload_hash))
+                $params['Content-MD5'] =
+                    $this->upload_hash_final = hash_final($this->upload_hash);
+
+            $info = $this->client->upload(
                 static::$config['bucket'],
                 $this->meta->getKey(),
                 $filepath,
                 static::$config['acl'] ?: 'private',
-                array('params' => array(
-                    'ContentType' => $this->meta->getType(),
-                    'CacheControl' => 'private, max-age=86400',
-                ))
+                array('params' => $params)
             );
             return true;
         }
@@ -104,6 +120,19 @@ class S3StorageBackend extends FileStorageBackend {
             throw new IOException('Unable to upload to S3: '.(string)$e);
         }
         return false;
+    }
+
+    // Support MD5 hash via the returned ETag header;
+    function getNativeHashAlgos() {
+        return array('md5');
+    }
+
+    function getHashDigest($algo) {
+        if ($algo == 'md5' && isset($this->upload_hash_final))
+            return $this->upload_hash_final;
+
+        // Return nothing. The migrater will compute the hash by downloading
+        // the object contents
     }
 
     // Send a redirect when the file is requested locally
