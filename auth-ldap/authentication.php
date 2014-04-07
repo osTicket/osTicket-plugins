@@ -444,9 +444,5 @@ class LdapAuthPlugin extends Plugin {
             StaffAuthenticationBackend::register(new StaffLDAPAuthentication($config));
         if ($config->get('auth-client'))
             UserAuthenticationBackend::register(new ClientLDAPAuthentication($config));
-
-        set_include_path(get_include_path().':'.dirname(__file__).'/include');
     }
 }
-
-?>
