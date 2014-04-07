@@ -226,8 +226,8 @@ class LDAPAuthentication {
 
         // Attempt to bind as the DN of the user looked up with the password
         // specified
-        $r = $c->bind($r->current()->dn(), $password);
-        if (PEAR::isError($r))
+        $bound = $c->bind($r->current()->dn(), $password);
+        if (PEAR::isError($bound))
             return null;
 
         // TODO: Save the DN in the config table so a lookup isn't necessary
