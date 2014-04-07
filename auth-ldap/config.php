@@ -121,6 +121,8 @@ class LdapConfig extends PluginConfig {
         global $ost;
         if ($ost && !extension_loaded('ldap')) {
             $ost->setWarning('LDAP extension is not available');
+            $errors['err'] = 'LDAP extension is not available. Please
+                install or enable the `php-ldap` extension on your web server';
             return;
         }
 
