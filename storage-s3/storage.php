@@ -92,9 +92,9 @@ class S3StorageBackend extends FileStorageBackend {
             // Hashing already performed in the ::write() method
         }
         elseif (is_string($filepath)) {
-            $filepath = fopen($filepath, 'r');
             $this->upload_hash = hash_init('md5');
             hash_update_file($this->upload_hash, $filepath);
+            $filepath = fopen($filepath, 'r');
             rewind($filepath);
         }
 

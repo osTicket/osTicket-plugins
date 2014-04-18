@@ -2,7 +2,7 @@
 
 return array(
     'id' =>             'storage:s3',
-    'version' =>        '0.1',
+    'version' =>        '0.2',
     'name' =>           'Attachments hosted in Amazon S3',
     'author' =>         'Jared Hancock',
     'description' =>    'Enables storing attachments in Amazon S3',
