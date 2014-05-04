@@ -242,7 +242,7 @@ class LDAPAuthentication {
     function getSchema($connection) {
         $schema = $this->getConfig()->get('schema');
         if (!$schema || $schema == 'auto') {
-            $dse = $connection->rootDse();
+            $dse = $connection->rootDse(array('supportedCapabilities'));
             // Microsoft Active Directory
             // http://www.alvestrand.no/objectid/1.2.840.113556.1.4.800.html
             if (($caps = $dse->getValue('supportedCapabilities'))
