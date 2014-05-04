@@ -266,15 +266,26 @@ class LDAPAuthentication {
         $schema = static::$schemas[$this->getSchema($c)];
         $schema = $schema['user'];
         $opts = array(
-            'scope'      => 'base',
-            'sizelimit'  => 1,
             'attributes' => array_filter(flatten(array(
                 $schema['first'], $schema['last'], $schema['full'],
                 $schema['phone'], $schema['mobile'], $schema['email'],
                 $schema['username'],
             )))
         );
-        $r = $c->search($lookup_dn, '(objectClass=*)', $opts);
+        switch ($this->getSchema($c)) {
+            case 'msad':
+                $r = $c->search(
+                    $this->getSearchBase(),
+                    sprintf('userPrincipalName=%s', $lookup_dn),
+                    $opts);
+                break;
+            default:
+                $opts += array(
+                    'scope'      => 'base',
+                    'sizelimit'  => 1,
+                );
+                $r = $c->search($lookup_dn, '(objectClass=*)', $opts);
+        }
         if (PEAR::isError($r) || !$r->count())
             return null;
 
@@ -316,9 +327,9 @@ class LDAPAuthentication {
     }
 
     function _getValue($entry, $names) {
-        foreach (splat($names) as $n)
+        foreach (array_filter(splat($names)) as $n)
             // Support multi-value attributes
-            foreach (splat($entry->getValue($n)) as $val)
+            foreach (splat($entry->getValue($n, 'all')) as $val)
                 // Return the first non-bool-false value of the entries
                 if ($val)
                     return $val;
