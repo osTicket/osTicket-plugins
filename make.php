@@ -365,8 +365,14 @@ class PluginBuilder extends Module {
                     $full = rtrim(dirname(__file__).'/lib/'.$lib,'/').'/';
                     $files = new RecursiveIteratorIterator(
                         new RecursiveDirectoryIterator($full),
-                        RecursiveIteratorIterator::SELF_FIRST);
+                            RecursiveIteratorIterator::SELF_FIRST);
                     foreach ($files as $f) {
+                        if (file_exists("$plugin/$phar_path"))
+                            // Hydrated
+                            continue;
+                        elseif ($f->isDir())
+                            // Unnecessary
+                            continue;
                         $includes[str_replace($full, $phar_path, $f->getPathname())]
                             = $f->getPathname();
                     }
@@ -374,7 +380,7 @@ class PluginBuilder extends Module {
             }
             $phar->buildFromIterator(new ArrayIterator($includes));
         }
-        $phar->setStub('<?php __HALT_COMPILER(); ?>'); # <?php # 4vim
+        $phar->setStub('<?php __HALT_COMPILER();');
     }
 
     function _hydrate() {
