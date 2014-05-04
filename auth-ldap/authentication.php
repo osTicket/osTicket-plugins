@@ -29,9 +29,9 @@ class LDAPAuthentication {
         'msad' => array(
             'user' => array(
                 'filter' => '(objectClass=user)',
-                'base' => 'CN=users',
-                'first' => 'firstName',
-                'last' => 'lastName',
+                'base' => 'CN=Users',
+                'first' => 'givenName',
+                'last' => 'sn',
                 'full' => 'displayName',
                 'email' => 'mail',
                 'phone' => 'telephoneNumber',
@@ -326,8 +326,8 @@ class LDAPAuthentication {
 
     function _getUserInfoArray($e, $schema) {
         // Detect first and last name if only full name is given
-        if (!($first = $e->getValue($schema['first']))
-                || !($last = $e->getValue($schema['last']))) {
+        if (!($first = $this->_getValue($e, $schema['first']))
+                || !($last = $this->_getValue($e, $schema['last']))) {
             $name = new PersonsName($this->_getValue($e, $schema['full']));
             $first = $name->getFirst();
             $last = $name->getLast();
