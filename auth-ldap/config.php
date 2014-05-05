@@ -169,6 +169,16 @@ class LdapConfig extends PluginConfig {
             $c = new Net_LDAP2($info);
             $r = $c->bind();
             if (PEAR::isError($r)) {
+                if (false === strpos($config['bind_dn'], '@')
+                        && false === strpos($config['bind_dn'], ',dc=')) {
+                    // Assume Active Directory, add the default domain in
+                    $config['bind_dn'] .= '@' . $config['domain'];
+                    $info['bind_dn'] = $config['bind_dn'];
+                    $c = new Net_LDAP2($info);
+                    $r = $c->bind();
+                }
+            }
+            if (PEAR::isError($r)) {
                 $connection_error =
                     $r->getMessage() .': Unable to bind to '.$info['host'];
             }
