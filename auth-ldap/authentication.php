@@ -266,26 +266,15 @@ class LDAPAuthentication {
         $schema = static::$schemas[$this->getSchema($c)];
         $schema = $schema['user'];
         $opts = array(
+            'scope' => 'base',
+            'sizelimit' => 1,
             'attributes' => array_filter(flatten(array(
                 $schema['first'], $schema['last'], $schema['full'],
                 $schema['phone'], $schema['mobile'], $schema['email'],
                 $schema['username'],
             )))
         );
-        switch ($this->getSchema($c)) {
-            case 'msad':
-                $r = $c->search(
-                    $this->getSearchBase(),
-                    sprintf('userPrincipalName=%s', $lookup_dn),
-                    $opts);
-                break;
-            default:
-                $opts += array(
-                    'scope'      => 'base',
-                    'sizelimit'  => 1,
-                );
-                $r = $c->search($lookup_dn, '(objectClass=*)', $opts);
-        }
+        $r = $c->search($lookup_dn, '(objectClass=*)', $opts);
         if (PEAR::isError($r) || !$r->count())
             return null;
 
@@ -365,6 +354,19 @@ class LDAPAuthentication {
                 return $user;
             break;
         case 'client':
+            $c = $this->getConnection();
+            if ('msad' == $this->getSchema($c)) {
+                // The user login DN will be user@domain. We need an LDAP DN
+                // -- fetch the real DN which looks like `CN=blah,DC=`
+                // NOTE: Already bound, so no need to bind again
+                $r = $c->search(
+                    $this->getSearchBase(),
+                    sprintf('userPrincipalName=%s', $dn),
+                    $opts);
+                if (!PEAR::isError($r) && $r->count())
+                    $dn = $r->current()->dn();
+            }
+
             // Lookup all the information on the user. Try to get the email
             // addresss as well as the username when looking up the user
             // locally.
