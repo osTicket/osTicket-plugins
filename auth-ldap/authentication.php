@@ -29,9 +29,9 @@ class LDAPAuthentication {
         'msad' => array(
             'user' => array(
                 'filter' => '(objectClass=user)',
-                'base' => 'CN=users',
-                'first' => 'firstName',
-                'last' => 'lastName',
+                'base' => 'CN=Users',
+                'first' => 'givenName',
+                'last' => 'sn',
                 'full' => 'displayName',
                 'email' => 'mail',
                 'phone' => 'telephoneNumber',
@@ -39,7 +39,7 @@ class LDAPAuthentication {
                 'username' => 'sAMAccountName',
                 'dn' => '{username}@{domain}',
                 'search' => '(&(objectCategory=person)(objectClass=user)(|(sAMAccountName={q}*)(firstName={q}*)(lastName={q}*)(displayName={q}*)))',
-                'lookup' => '(&(objectCategory=person)(objectClass=user)(sAMAccountName={q}))',
+                'lookup' => '(&(objectCategory=person)(objectClass=user)({attr}={q}))',
             ),
             'group' => array(
                 'ismember' => '(&(objectClass=user)(sAMAccountName={username})
@@ -60,15 +60,17 @@ class LDAPAuthentication {
                 'username' => 'uid',
                 'dn' => 'uid={username},{search_base}',
                 'search' => '(&(objectClass=inetOrgPerson)(|(uid={q}*)(displayName={q}*)(cn={q}*)))',
-                'lookup' => '(&(objectClass=inetOrgPerson)(uid={q}))',
+                'lookup' => '(&(objectClass=inetOrgPerson)({attr}={q}))',
             ),
         ),
     );
 
     var $config;
+    var $type = 'staff';
 
-    function __construct($config) {
+    function __construct($config, $type='staff') {
         $this->config = $config;
+        $this->type = $type;
     }
     function getConfig() {
         return $this->config;
@@ -120,7 +122,12 @@ class LDAPAuthentication {
         }
     }
 
-    function getConnection() {
+    function getConnection($force_reconnect=false) {
+        static $connection = null;
+
+        if ($connection && !$force_reconnect)
+            return $connection;
+
         require_once('include/Net/LDAP2.php');
         // Set reasonable timeout limits
         $defaults = array(
@@ -146,8 +153,10 @@ class LDAPAuthentication {
             $params = $defaults + $s;
             $c = new Net_LDAP2($params);
             $r = $c->bind();
-            if (!PEAR::isError($r))
+            if (!PEAR::isError($r)) {
+                $connection = $c;
                 return $c;
+            }
         }
     }
 
@@ -201,7 +210,7 @@ class LDAPAuthentication {
         );
         $r = $c->bind($dn, $password);
         if (!PEAR::isError($r))
-            return $this->lookupAndSync($username);
+            return $this->lookupAndSync($username, $dn);
 
         // Another effort is to search for the user
         if (!$this->_bind($c))
@@ -209,7 +218,12 @@ class LDAPAuthentication {
 
         $r = $c->search(
             $this->getSearchBase(),
-            str_replace('{q}', $username, $schema['lookup']),
+            str_replace(
+                array('{attr}','{q}'),
+                // Assume email address if the $username contains an @ sign
+                array(strpos($username, '@') ? $schema['email'] : $schema['username'],
+                    $username),
+                $schema['lookup']),
             array('sizelimit' => 1)
         );
         if (PEAR::isError($r) || !$r->count())
@@ -217,13 +231,13 @@ class LDAPAuthentication {
 
         // Attempt to bind as the DN of the user looked up with the password
         // specified
-        $r = $c->bind($r->current()->dn(), $password);
-        if (PEAR::isError($r))
+        $bound = $c->bind($r->current()->dn(), $password);
+        if (PEAR::isError($bound))
             return null;
 
         // TODO: Save the DN in the config table so a lookup isn't necessary
         //       in the future
-        return $this->lookupAndSync($username);
+        return $this->lookupAndSync($username, $r->current()->dn());
     }
 
     /**
@@ -233,7 +247,7 @@ class LDAPAuthentication {
     function getSchema($connection) {
         $schema = $this->getConfig()->get('schema');
         if (!$schema || $schema == 'auto') {
-            $dse = $connection->rootDse();
+            $dse = $connection->rootDse(array('supportedCapabilities'));
             // Microsoft Active Directory
             // http://www.alvestrand.no/objectid/1.2.840.113556.1.4.800.html
             if (($caps = $dse->getValue('supportedCapabilities'))
@@ -249,16 +263,16 @@ class LDAPAuthentication {
         return '2307';
     }
 
-    function lookup($lookup_dn) {
+    function lookup($lookup_dn, $bind=true) {
         $c = $this->getConnection();
-        if (!$this->_bind($c))
+        if ($bind && !$this->_bind($c))
             return null;
 
         $schema = static::$schemas[$this->getSchema($c)];
         $schema = $schema['user'];
         $opts = array(
-            'scope'      => 'base',
-            'sizelimit'  => 1,
+            'scope' => 'base',
+            'sizelimit' => 1,
             'attributes' => array_filter(flatten(array(
                 $schema['first'], $schema['last'], $schema['full'],
                 $schema['phone'], $schema['mobile'], $schema['email'],
@@ -307,9 +321,9 @@ class LDAPAuthentication {
     }
 
     function _getValue($entry, $names) {
-        foreach (splat($names) as $n)
+        foreach (array_filter(splat($names)) as $n)
             // Support multi-value attributes
-            foreach (splat($entry->getValue($n)) as $val)
+            foreach (splat($entry->getValue($n, 'all')) as $val)
                 // Return the first non-bool-false value of the entries
                 if ($val)
                     return $val;
@@ -317,8 +331,8 @@ class LDAPAuthentication {
 
     function _getUserInfoArray($e, $schema) {
         // Detect first and last name if only full name is given
-        if (!($first = $e->getValue($schema['first']))
-                || !($last = $e->getValue($schema['last']))) {
+        if (!($first = $this->_getValue($e, $schema['first']))
+                || !($last = $this->_getValue($e, $schema['last']))) {
             $name = new PersonsName($this->_getValue($e, $schema['full']));
             $first = $name->getFirst();
             $last = $name->getLast();
@@ -338,9 +352,47 @@ class LDAPAuthentication {
         );
     }
 
-    function lookupAndSync($username) {
-        if (($user = new StaffSession($username)) && $user->getId())
-            return $user;
+    function lookupAndSync($username, $dn) {
+        switch ($this->type) {
+        case 'staff':
+            if (($user = new StaffSession($username)) && $user->getId())
+                return $user;
+            break;
+        case 'client':
+            $c = $this->getConnection();
+            if ('msad' == $this->getSchema($c)) {
+                // The user login DN will be user@domain. We need an LDAP DN
+                // -- fetch the real DN which looks like `CN=blah,DC=`
+                // NOTE: Already bound, so no need to bind again
+                $r = $c->search(
+                    $this->getSearchBase(),
+                    sprintf('userPrincipalName=%s', $dn),
+                    $opts);
+                if (!PEAR::isError($r) && $r->count())
+                    $dn = $r->current()->dn();
+            }
+
+            // Lookup all the information on the user. Try to get the email
+            // addresss as well as the username when looking up the user
+            // locally.
+            if (!($info = $this->lookup($dn, false)))
+                return;
+
+            $acct = false;
+            foreach (array($username, $info['username'], $info['email']) as $name) {
+                if ($acct = ClientAccount::lookupByUsername($name))
+                    break;
+            }
+            if (!$acct)
+                return new ClientCreateRequest($this, $username, $info);
+
+            if (($client = new ClientSession(new EndUser($acct->getUser())))
+                    && !$client->getId())
+                return;
+
+            return $client;
+        }
+
         // TODO: Auto-create users, etc.
     }
 }
@@ -381,15 +433,34 @@ class StaffLDAPAuthentication extends StaffAuthenticationBackend
     }
 }
 
+class ClientLDAPAuthentication extends UserAuthenticationBackend {
+    static $name = "Active Directory or LDAP";
+    static $id = "ldap.client";
+
+    function __construct($config) {
+        $this->_ldap = new LDAPAuthentication($config, 'client');
+        if ($domain = $config->get('domain'))
+            self::$name .= sprintf(' (%s)', $domain);
+    }
+
+    function authenticate($username, $password=false, $errors=array()) {
+        $object = $this->_ldap->authenticate($username, $password);
+        if ($object instanceof ClientCreateRequest)
+            $object->setBackend($this);
+        return $object;
+    }
+}
+
 require_once(INCLUDE_DIR.'class.plugin.php');
 require_once('config.php');
 class LdapAuthPlugin extends Plugin {
     var $config_class = 'LdapConfig';
 
     function bootstrap() {
-        StaffAuthenticationBackend::register(new StaffLDAPAuthentication($this->getConfig()));
-        set_include_path(get_include_path().':'.dirname(__file__).'/include');
+        $config = $this->getConfig();
+        if ($config->get('auth-staff'))
+            StaffAuthenticationBackend::register(new StaffLDAPAuthentication($config));
+        if ($config->get('auth-client'))
+            UserAuthenticationBackend::register(new ClientLDAPAuthentication($config));
     }
 }
-
-?>

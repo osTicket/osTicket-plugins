@@ -91,6 +91,27 @@ class LdapConfig extends PluginConfig {
                     '2307' => 'Posix Account',
                 ),
             )),
+
+            'auth' => new SectionBreakField(array(
+                'label' => 'Authentication Modes',
+                'hint' => 'Accounts must be created locally for both clients and staff before they can be authenticated',
+                'hint' => 'Authentication modes for clients and staff
+                    members can be enabled independently',
+            )),
+            'auth-staff' => new BooleanField(array(
+                'label' => 'Staff Authentication',
+                'default' => true,
+                'configuration' => array(
+                    'desc' => 'Enable authentication of staff members'
+                )
+            )),
+            'auth-client' => new BooleanField(array(
+                'label' => 'Client Authentication',
+                'default' => false,
+                'configuration' => array(
+                    'desc' => 'Enable authentication of clients'
+                )
+            )),
         );
     }
 
@@ -100,6 +121,8 @@ class LdapConfig extends PluginConfig {
         global $ost;
         if ($ost && !extension_loaded('ldap')) {
             $ost->setWarning('LDAP extension is not available');
+            $errors['err'] = 'LDAP extension is not available. Please
+                install or enable the `php-ldap` extension on your web server';
             return;
         }
 
@@ -145,6 +168,16 @@ class LdapConfig extends PluginConfig {
             );
             $c = new Net_LDAP2($info);
             $r = $c->bind();
+            if (PEAR::isError($r)) {
+                if (false === strpos($config['bind_dn'], '@')
+                        && false === strpos($config['bind_dn'], ',dc=')) {
+                    // Assume Active Directory, add the default domain in
+                    $config['bind_dn'] .= '@' . $config['domain'];
+                    $info['bind_dn'] = $config['bind_dn'];
+                    $c = new Net_LDAP2($info);
+                    $r = $c->bind();
+                }
+            }
             if (PEAR::isError($r)) {
                 $connection_error =
                     $r->getMessage() .': Unable to bind to '.$info['host'];

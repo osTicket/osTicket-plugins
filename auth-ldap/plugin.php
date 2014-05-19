@@ -1,8 +1,8 @@
 <?php
-
+set_include_path(get_include_path().PATH_SEPARATOR.dirname(__file__).'/include');
 return array(
     'id' =>             'auth:ldap', # notrans
-    'version' =>        '0.4',
+    'version' =>        '0.5',
     'name' =>           'LDAP Authentication and Lookup',
     'author' =>         'Jared Hancock',
     'description' =>    'Provides a configurable authentication backend
