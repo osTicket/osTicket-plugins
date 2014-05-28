@@ -13,7 +13,7 @@ return array(
         "jasig/phpcas" => array(
             "version" => "dev-master",
             "map" => array(
-                "jasig/phpcas/source" => 'lib',
+                "jasig/phpcas/source" => 'lib/jasig/phpcas',
             )
         ),
     ),

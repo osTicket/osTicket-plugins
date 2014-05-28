@@ -1,6 +1,6 @@
 <?php
 
-require_once(dirname(__file__).'/../lib'.'/jasig/phpcas/cas.php');
+require_once(dirname(__file__).'/lib/jasig/phpcas/cas.php');
 
 class CasAuth {
     var $config;
@@ -76,7 +76,6 @@ class CasStaffAuthBackend extends ExternalStaffAuthenticationBackend {
     static $id = "cas";
     static $name = "CAS";
 
-    //static $sign_in_image_url = "https://developers.google.com/+/images/branding/sign-in-buttons/White-signin_Long_base_44dp.png";
     static $service_name = "CAS";
 
     var $config;
@@ -87,7 +86,6 @@ class CasStaffAuthBackend extends ExternalStaffAuthenticationBackend {
     }
 
     function signOn() {
-        // TODO: Check session for auth token
         if (isset($_SESSION[':cas']['user'])) {
             if (($staff = new StaffSession($this->cas->getEmail()))
                     && $staff->getId())
@@ -115,7 +113,6 @@ class CasClientAuthBackend extends ExternalUserAuthenticationBackend {
     static $id = "cas.client";
     static $name = "CAS";
 
-    //static $sign_in_image_url = "https://developers.google.com/+/images/branding/sign-in-buttons/Red-signin_Long_base_44dp.png";
     static $service_name = "CAS";
 
     function __construct($config) {

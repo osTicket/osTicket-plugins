@@ -9,7 +9,6 @@ class CasAuthPlugin extends Plugin {
     function bootstrap() {
         $config = $this->getConfig();
 
-        # ----- Google Plus ---------------------
         $enabled = $config->get('cas-enabled');
         if (in_array($enabled, array('all', 'staff'))) {
             require_once('cas.php');
