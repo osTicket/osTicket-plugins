@@ -29,6 +29,10 @@ class CasPluginConfig extends PluginConfig {
                 'label' => 'CAS Server Context',
                 'configuration' => array('size'=>60, 'length'=>100),
             )),
+            'cas-ca-cert-path' => new TextboxField(array(
+                'label' => 'CAS CA Cert Path',
+                'configuration' => array('size'=>60, 'length'=>100),
+            )),
             'cas-at-domain' => new TextboxField(array(
                 'label' => 'CAS e-mail suffix (ex. @domain.tld)',
                 'configuration' => array('size'=>60, 'length'=>100),

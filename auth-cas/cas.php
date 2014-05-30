@@ -1,6 +1,6 @@
 <?php
 
-require_once(dirname(__file__).'/lib/jasig/phpcas/cas.php');
+require_once(dirname(__file__).'/lib/jasig/phpcas/CAS.php');
 
 class CasAuth {
     var $config;
@@ -15,8 +15,11 @@ class CasAuth {
         phpCAS::client(CAS_VERSION_2_0, $this->config->get('cas-hostname'),
          intval($this->config->get('cas-port')), $this->config->get('cas-context')
         );
-        phpCAS::setNoCasServerValidation();
-        phpCAS::setCasServerCACert(dirname(__file__).'cacert.pem');
+        if($this->config->get('cas-ca-cert-path')) {
+            phpCAS::setCasServerCACert($this->config->get('cas-ca-cert-path'));
+        } else {
+            phpCAS::setNoCasServerValidation();
+        }
         if(!phpCAS::isAuthenticated()) {
             phpCAS::forceAuthentication();
         } else {
@@ -132,7 +135,6 @@ class CasClientAuthBackend extends ExternalUserAuthenticationBackend {
                 return $client;
 
             else {
-                var_dump($this->cas->getProfile());
                 return new ClientCreateRequest($this, $this->cas->getEmail(), $this->cas->getProfile());
             }
         }
