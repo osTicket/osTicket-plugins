@@ -76,14 +76,28 @@ class FilesystemStorage extends FileStorageBackend {
 }
 
 class FsStoragePluginConfig extends PluginConfig {
+
+    // Provide compatibility function for versions of osTicket prior to
+    // translation support (v1.9.4)
+    function translate() {
+        if (!method_exists('Plugin', 'translate')) {
+            return array(
+                function($x) { return $x; },
+                function($x, $y, $n) { return $n != 1 ? $y : $x; },
+            );
+        }
+        return Plugin::translate('storage-fs');
+    }
+
     function getOptions() {
+        list($__, $_N) = self::translate();
         return array(
             'uploadpath' => new TextboxField(array(
-                'label'=>'Base folder for attachment files',
-                'hint'=>'The path must already exist and be writeable by the
-                    web server. If the path starts with neither a `/` or a
+                'label'=>$__('Base folder for attachment files'),
+                'hint'=>$__('The path must already exist and be writeable by the
+                    web server. If the path starts with neither a `/` nor a
                     drive letter, the path will be assumed to be relative to
-                    the root of osTicket',
+                    the root of osTicket'),
                 'configuration'=>array('size'=>60, 'length'=>255),
                 'required'=>true,
             )),
@@ -91,6 +105,7 @@ class FsStoragePluginConfig extends PluginConfig {
     }
 
     function pre_save($config, &$errors) {
+        list($__, $_N) = self::translate();
         $path = $config['uploadpath'];
         if ($path[0] != '/' && $path[1] != ':')
             $path = ROOT_DIR . $path;
@@ -98,13 +113,13 @@ class FsStoragePluginConfig extends PluginConfig {
         $field = $this->getForm()->getField('uploadpath');
         $file = md5(microtime());
         if (!@is_dir($path))
-            $field->addError('Path does not exist');
+            $field->addError($__('Path does not exist'));
         elseif (!@opendir($path))
-            $field->addError('Unable to access directory');
+            $field->addError($__('Unable to access directory'));
         elseif (!@touch("$path/$file"))
-            $field->addError('Unable to write to directory');
+            $field->addError($__('Unable to write to directory'));
         elseif (!@unlink("$path/$file"))
-            $field->addError('Unable to remove files from directory');
+            $field->addError($__('Unable to remove files from directory'));
         else
             touch("$path/.keep");
         return true;
@@ -115,11 +130,13 @@ class FsStoragePlugin extends Plugin {
     var $config_class = 'FsStoragePluginConfig';
 
     function bootstrap() {
-        $uploadpath = $this->getConfig()->get('uploadpath');
+        $config = $this->getConfig();
+        $uploadpath = $config->get('uploadpath');
+        list($__, $_N) = $config::translate();
         if ($uploadpath) {
             FileStorageBackend::register('F', 'FilesystemStorage');
             FilesystemStorage::$base = $uploadpath;
-            FilesystemStorage::$desc = 'Filesystem: '.$uploadpath;
+            FilesystemStorage::$desc = $__('Filesystem') .': '.$uploadpath;
         }
     }
 }
