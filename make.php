@@ -288,7 +288,8 @@ class PluginBuilder extends Module {
             'options' => array(
                 'build' => 'Compile a PHAR file for a plugin',
                 'hydrate' => 'Prep plugin folders for embedding in osTicket directly',
-                'list' => 'Show PHAR contents',
+                'list' => 'List the contents of a phar file',
+                'unpack' => 'Unpack a PHAR file (similar to unzip)',
             ),
         ),
         'plugin' => array(
@@ -307,9 +308,24 @@ class PluginBuilder extends Module {
             'Compress source files when hydrading and building. Useful for
             saving space when building PHAR files',
             'action'=>'store_true', 'default'=>false),
+        "key" => array('-k','--key','metavar'=>'API-KEY',
+            'help'=>'Crowdin project API key.'),
+        'osticket' => array('-R', '--osticket', 'metavar'=>'ROOT',
+            'help'=>'Root of osTicket installation (required for language compilation)'),
     );
 
+    static $project = 'osticket-plugins';
+    static $crowdin_api_url = 'http://i18n.osticket.com/api/project/{project}/{command}';
+
     function run($args, $options) {
+        $this->key = $options['key'];
+        if (!$this->key && defined('CROWDIN_API_KEY'))
+            $this->key = CROWDIN_API_KEY;
+
+        if (@$options['osticket']) {
+            require $options['osticket'] . '/include/class.translation.php';
+        }
+
         switch (strtolower($args['action'])) {
         case 'build':
             $plugin = $args['plugin'];
@@ -319,6 +335,7 @@ class PluginBuilder extends Module {
 
             $this->_build($plugin, $options);
             break;
+
         case 'hydrate':
             $this->_hydrate($options);
             break;
@@ -330,6 +347,29 @@ class PluginBuilder extends Module {
                 $this->stdout->write($name . "\n");
             }
             break;
+
+        case 'list':
+            $plugin = $args['plugin'];
+            if (!file_exists($plugin))
+                $this->fail("PHAR file '$plugin' does not exist");
+
+            $p = new Phar($plugin);
+            $total = 0;
+            foreach (new RecursiveIteratorIterator($p) as $info) {
+                $this->stdout->write(sprintf(
+                    "% 10.10d  %s  %s\n",
+                    $info->getSize(),
+                    strftime('%x %X', $info->getMTime()),
+                    str_replace(
+                        array('phar://', realpath($plugin).'/'),
+                        array('',''),
+                        (string) $info)));
+                $total += $info->getSize();
+            }
+            $this->stdout->write("---------------------------------------\n");
+            $this->stdout->write(sprintf("% 10.10d\n", $total));
+            break;
+
         default:
             $this->fail("Unsupported MAKE action. See help");
         }
@@ -338,6 +378,7 @@ class PluginBuilder extends Module {
     function _build($plugin, $options) {
         @unlink("$plugin.phar");
         $phar = new Phar("$plugin.phar");
+        $phar->startBuffering();
 
         if ($options['sign']) {
             if (!function_exists('openssl_get_privatekey'))
@@ -357,7 +398,6 @@ class PluginBuilder extends Module {
         $phar->buildFromDirectory($plugin);
 
         // Add library dependencies
-        $phar->stopBuffering();
         if (isset($info['requires'])) {
             $includes = array();
             foreach ($info['requires'] as $lib=>$info) {
@@ -396,8 +436,21 @@ class PluginBuilder extends Module {
                 }
             }
         }
+
+        // Add language files
+        if (@$this->key) {
+            foreach ($this->getLanguageFiles($plugin) as $name=>$content) {
+                $name = ltrim($name, '/');
+                if (!$content) continue;
+                $phar->addFromString("i18n/{$name}", $content);
+            }
+        }
+        else {
+            $this->stderr->write("Specify Crowdin API key to integrate language files\n");
+        }
+
         $phar->setStub('<?php __HALT_COMPILER();');
-        $phar->startBuffering();
+        $phar->stopBuffering();
     }
 
     function _hydrate($options) {
@@ -449,6 +502,7 @@ class PluginBuilder extends Module {
                         }
                     }
                 }
+                // TODO: Fetch language files for this plugin
             }
         }
     }
@@ -466,6 +520,116 @@ class PluginBuilder extends Module {
         curl_close($ch);
 
         return array($code, $result);
+    }
+
+    function _crowdin($command, $args=array()) {
+
+        $url = str_replace(array('{command}', '{project}'),
+            array($command, self::$project),
+            self::$crowdin_api_url);
+
+        $args += array('key' => $this->key);
+        foreach ($args as &$a)
+            $a = urlencode($a);
+        unset($a);
+        $url .= '?' . http_build_query($args);
+
+        return $this->_http_get($url);
+    }
+
+    function getTranslations() {
+        error_reporting(E_ALL);
+        list($code, $body) = $this->_crowdin('status');
+        $langs = array();
+
+        if ($code != 200) {
+            $this->stderr->write($code.": Bad status from Crowdin fetching translations\n");
+            return $langs;
+        }
+        $d = new DOMDocument();
+        $d->loadXML($body);
+
+        $xp = new DOMXpath($d);
+        foreach ($xp->query('//language') as $c) {
+            $name = $code = '';
+            foreach ($c->childNodes as $n) {
+                switch (strtolower($n->nodeName)) {
+                case 'name':
+                    $name = $n->textContent;
+                    break;
+                case 'code':
+                    $code = $n->textContent;
+                    break;
+                }
+            }
+            if (!$code)
+                continue;
+            $langs[] = $code;
+        }
+        return $langs;
+    }
+
+    function getLanguageFiles($plugin) {
+        $files = array();
+        if (!class_exists('Translation'))
+            $this->stderr->write("Specify osTicket root path to compile MO files\n");
+
+        foreach ($this->getTranslations() as $lang) {
+            list($code, $stuff) = $this->_crowdin("download/$lang.zip");
+            if ($code != 200) {
+                $this->stderr->write("$lang: Unable to download language files\n");
+                continue;
+            }
+
+            $lang = str_replace('-','_',$lang);
+
+            // Extract a few files from the zip archive
+            $temp = tempnam('/tmp', 'osticket-cli');
+            $f = fopen($temp, 'w');
+            fwrite($f, $stuff);
+            fclose($f);
+            $zip = new ZipArchive();
+            $zip->open($temp);
+            unlink($temp);
+
+            for ($i=0; $i<$zip->numFiles; $i++) {
+                $info = $zip->statIndex($i);
+                if (strpos($info['name'], $plugin) === 0) {
+                    $name = substr($info['name'], strlen($plugin));
+                    $name = ltrim($name, '/');
+                    if (substr($name, -3) == '.po' && class_exists('Translation')) {
+                        $content = $this->buildMo($zip->getFromIndex($i));
+                        $name = substr($name, 0, -3) . '.mo.php';
+                    }
+                    else {
+                        $content = $zip->getFromIndex($i);
+                    }
+                    // Files in the plugin are laid out by (lang)/(file),
+                    // where (file) has the plugin name removed. Files on
+                    // Crowdin are organized by (plugin)/file
+                    $files["$lang/{$name}"] = $content;
+                }
+            }
+            $zip->close();
+        }
+        return $files;
+    }
+
+    function buildMo($po_contents) {
+        $pipes = array();
+        $msgfmt = proc_open('msgfmt -o- -',
+            array(0=>array('pipe','r'), 1=>array('pipe','w')),
+            $pipes);
+        if (is_resource($msgfmt)) {
+            fwrite($pipes[0], $po_contents);
+            fclose($pipes[0]);
+            $mo_input = fopen('php://temp', 'r+b');
+            fwrite($mo_input, stream_get_contents($pipes[1]));
+            rewind($mo_input);
+            $mo = Translation::buildHashFile($mo_input, false, true);
+            fclose($mo_input);
+        }
+        return $mo;
     }
 
     function ensureComposer() {
