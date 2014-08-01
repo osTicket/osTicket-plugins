@@ -6,7 +6,7 @@ return array(
     'name' =>           /* trans */ 'Oauth2 Authentication and Lookup',
     'author' =>         'Jared Hancock',
     'description' =>    /* trans */ 'Provides a configurable authentication backend
-        for authenticating staff and clients using an OATH2 server
+        for authenticating staff and clients using an OAUTH2 server
         interface.',
     'url' =>            'http://www.osticket.com/plugins/auth/oauth',
     'plugin' =>         'authentication.php:OauthAuthPlugin',
