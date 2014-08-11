@@ -80,7 +80,7 @@ class LdapConfig extends PluginConfig {
             )),
             'bind_dn' => new TextboxField(array(
                 'label' => $__('Search User'),
-                'hint' => $__('Bind DN (distinguised name) to bind to the LDAP
+                'hint' => $__('Bind DN (distinguished name) to bind to the LDAP
                     server as in order to perform searches'),
                 'configuration' => array('size'=>40, 'length'=>120),
             )),
