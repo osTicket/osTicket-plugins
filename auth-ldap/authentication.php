@@ -171,7 +171,11 @@ class LDAPAuthentication {
             unset($pw);
             return !PEAR::isError($r);
         }
-        return false;
+        else {
+            // try anonymous bind
+            $r = $connection->bind();
+            return !PEAR::isError($r);
+        }
     }
 
     function authenticate($username, $password=null) {
