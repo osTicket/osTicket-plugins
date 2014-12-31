@@ -4,10 +4,6 @@ class Option {
 
     var $default = false;
 
-    function Option() {
-        call_user_func_array(array($this, "__construct"), func_get_args());
-    }
-
     function __construct($options=false) {
         list($this->short, $this->long) = array_slice($options, 0, 2);
         $this->help = (isset($options['help'])) ? $options['help'] : "";
@@ -92,9 +88,6 @@ class Option {
 class OutputStream {
     var $stream;
 
-    function OutputStream() {
-        call_user_func_array(array($this, '__construct'), func_get_args());
-    }
     function __construct($stream) {
         $this->stream = fopen($stream, 'w');
     }
@@ -119,10 +112,6 @@ class Module {
 
     var $_options;
     var $_args;
-
-    function Module() {
-        call_user_func_array(array($this, '__construct'), func_get_args());
-    }
 
     function __construct() {
         $this->options['help'] = array("-h","--help",
@@ -313,6 +302,10 @@ class PluginBuilder extends Module {
             key file'),
         'verbose' => array('-v','--verbose','help'=>
             'Be more verbose','default'=>false, 'action'=>'store_true'),
+        'compress' => array('-z', '--compress', 'help' =>
+            'Compress source files when hydrading and building. Useful for
+            saving space when building PHAR files',
+            'action'=>'store_true', 'default'=>false),
     );
 
     function run($args, $options) {
@@ -326,7 +319,7 @@ class PluginBuilder extends Module {
             $this->_build($plugin, $options);
             break;
         case 'hydrate':
-            $this->_hydrate();
+            $this->_hydrate($options);
             break;
         default:
             $this->fail("Unsupported MAKE action. See help");
@@ -355,6 +348,7 @@ class PluginBuilder extends Module {
         $phar->buildFromDirectory($plugin);
 
         // Add library dependencies
+        $phar->stopBuffering();
         if (isset($info['requires'])) {
             $includes = array();
             foreach ($info['requires'] as $lib=>$info) {
@@ -373,17 +367,27 @@ class PluginBuilder extends Module {
                         elseif ($f->isDir())
                             // Unnecessary
                             continue;
-                        $includes[str_replace($full, $phar_path, $f->getPathname())]
-                            = $f->getPathname();
+                        $content = '';
+                        $local = str_replace($full, $phar_path, $f->getPathname());
+                        if ($options['compress'] && fnmatch('*.php', $f->getPathname())) {
+                            $p = popen('php -w '.realpath($f->getPathname()), 'r');
+                            while ($b = fread($p, 8192))
+                                $content .= $b;
+                            fclose($p);
+                            $phar->addFromString($local, $content);
+                        }
+                        else {
+                            $phar->addFile($f->getPathname(), $local);
+                        }
                     }
                 }
             }
-            $phar->buildFromIterator(new ArrayIterator($includes));
         }
         $phar->setStub('<?php __HALT_COMPILER();');
+        $phar->startBuffering();
     }
 
-    function _hydrate() {
+    function _hydrate($options) {
         $this->resolveDependencies();
 
         // Move things into place
@@ -414,7 +418,18 @@ class PluginBuilder extends Module {
                         $parent = dirname($target);
                         if (!file_exists($parent))
                             mkdir($parent, 0777, true);
-                        copy($item, $target);
+                        // Compress PHP files
+                        if ($options['compress'] && fnmatch('*.php', $item)) {
+                            $p = popen('php -w '.realpath($item), 'r');
+                            $T = fopen($target, 'w');
+                            while ($b = fread($p, 8192))
+                                fwrite($T, $b);
+                            fclose($p);
+                            fclose($T);
+                        }
+                        else {
+                            copy($item, $target);
+                        }
                     }
                 }
             }
