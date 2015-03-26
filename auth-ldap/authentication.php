@@ -360,13 +360,14 @@ class LDAPAuthentication {
             break;
         case 'client':
             $c = $this->getConnection();
-            if ('msad' == $this->getSchema($c)) {
+            if ('msad' == $this->getSchema($c) && stripos($dn, ',dc=') === false) {
                 // The user login DN will be user@domain. We need an LDAP DN
                 // -- fetch the real DN which looks like `CN=blah,DC=`
                 // NOTE: Already bound, so no need to bind again
+                list($samid) = explode('@', $dn);
                 $r = $c->search(
                     $this->getSearchBase(),
-                    sprintf('userPrincipalName=%s', $dn),
+                    sprintf('(|(userPrincipalName=%s)(samAccountName=%s))', $dn, $samid),
                     $opts);
                 if (!PEAR::isError($r) && $r->count())
                     $dn = $r->current()->dn();
@@ -380,7 +381,7 @@ class LDAPAuthentication {
 
             $acct = false;
             foreach (array($username, $info['username'], $info['email']) as $name) {
-                if ($acct = ClientAccount::lookupByUsername($name))
+                if ($name && ($acct = ClientAccount::lookupByUsername($name)))
                     break;
             }
             if (!$acct)
