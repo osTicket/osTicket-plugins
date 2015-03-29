@@ -1,5 +1,4 @@
 <?php
-
 return array(
     'id' =>             'auth:cas', # notrans
     'version' =>        '0.1',
@@ -11,7 +10,7 @@ return array(
     'plugin' =>         'authentication.php:CasAuthPlugin',
     'requires' => array(
         "jasig/phpcas" => array(
-            "version" => "dev-master",
+            "version" => "1.3.3",
             "map" => array(
                 "jasig/phpcas/source" => 'lib/jasig/phpcas',
             )

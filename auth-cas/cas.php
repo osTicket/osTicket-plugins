@@ -12,8 +12,11 @@ class CasAuth {
 
     function triggerAuth() {
         $self = $this;
-        phpCAS::client(CAS_VERSION_2_0, $this->config->get('cas-hostname'),
-         intval($this->config->get('cas-port')), $this->config->get('cas-context')
+        phpCAS::client(
+          CAS_VERSION_2_0,
+          $this->config->get('cas-hostname'),
+          intval($this->config->get('cas-port')),
+          $this->config->get('cas-context')
         );
         if($this->config->get('cas-ca-cert-path')) {
             phpCAS::setCasServerCACert($this->config->get('cas-ca-cert-path'));
@@ -40,7 +43,8 @@ class CasAuth {
     function setEmail() {
         if($this->config->get('cas-email-attribute-key') !== null
             && phpCAS::hasAttribute($this->config->get('cas-email-attribute-key'))) {
-            $_SESSION[':cas']['email'] = phpCAS::getAttribute($this->config->get('cas-email-attribute-key'));
+            $_SESSION[':cas']['email'] = phpCAS::getAttribute(
+              $this->config->get('cas-email-attribute-key'));
         } else {
             $email = $this->getUser();
             if($this->config->get('cas-at-domain') !== null) {
@@ -57,7 +61,8 @@ class CasAuth {
     function setName() {
         if($this->config->get('cas-name-attribute-key') !== null
             && phpCAS::hasAttribute($this->config->get('cas-name-attribute-key'))) {
-            $_SESSION[':cas']['name'] = phpCAS::getAttribute($this->config->get('cas-name-attribute-key'));
+            $_SESSION[':cas']['name'] = phpCAS::getAttribute(
+              $this->config->get('cas-name-attribute-key'));
         } else {
             $_SESSION[':cas']['name'] = $this->getUser();
         }
@@ -90,12 +95,12 @@ class CasStaffAuthBackend extends ExternalStaffAuthenticationBackend {
 
     function signOn() {
         if (isset($_SESSION[':cas']['user'])) {
-            if (($staff = new StaffSession($this->cas->getEmail()))
-                    && $staff->getId())
+            $staff = new StaffSession($this->cas->getEmail());
+            if ($staff && $staff->getId()) {
                 return $staff;
-
-            else
+            } else {
                 $_SESSION['_staff']['auth']['msg'] = 'Have your administrator create a local account';
+            }
         }
     }
 
@@ -108,7 +113,7 @@ class CasStaffAuthBackend extends ExternalStaffAuthenticationBackend {
     function triggerAuth() {
         parent::triggerAuth();
         $cas = $this->cas->triggerAuth();
-        Http::redirect(ROOT_PATH . 'scp');
+        Http::redirect(ROOT_PATH . 'scp/');
     }
 }
 
@@ -129,13 +134,17 @@ class CasClientAuthBackend extends ExternalUserAuthenticationBackend {
 
     function signOn() {
         if (isset($_SESSION[':cas']['user'])) {
-            if (($acct = ClientAccount::lookupByUsername($this->cas->getEmail()))
-                    && $acct->getId()
-                    && ($client = new ClientSession(new EndUser($acct->getUser()))))
-                return $client;
+            $acct = ClientAccount::lookupByUsername($this->cas->getEmail());
+            $client = null;
+            if ($acct && $acct->getId()) {
+                $client = new ClientSession(new EndUser($acct->getUser()));
+            }
 
-            else {
-                return new ClientCreateRequest($this, $this->cas->getEmail(), $this->cas->getProfile());
+            if ($client) {
+                return $client;
+            } else {
+                return new ClientCreateRequest(
+                  $this, $this->cas->getEmail(), $this->cas->getProfile());
             }
         }
     }
@@ -151,5 +160,3 @@ class CasClientAuthBackend extends ExternalUserAuthenticationBackend {
         Http::redirect(ROOT_PATH . 'login.php');
     }
 }
-
-
