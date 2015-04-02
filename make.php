@@ -288,6 +288,7 @@ class PluginBuilder extends Module {
             'options' => array(
                 'build' => 'Compile a PHAR file for a plugin',
                 'hydrate' => 'Prep plugin folders for embedding in osTicket directly',
+                'list' => 'Show PHAR contents',
             ),
         ),
         'plugin' => array(
@@ -320,6 +321,14 @@ class PluginBuilder extends Module {
             break;
         case 'hydrate':
             $this->_hydrate($options);
+            break;
+        case 'list':
+            $P = new Phar($args[1]);
+            $base = realpath($args[1]);
+            foreach (new RecursiveIteratorIterator($P) as $finfo) {
+                $name = str_replace('phar://'.$base.'/', '', $finfo->getPathname());
+                $this->stdout->write($name . "\n");
+            }
             break;
         default:
             $this->fail("Unsupported MAKE action. See help");
