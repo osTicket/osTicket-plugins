@@ -2,7 +2,7 @@
 
 return array(
     'id' =>             'storage:fs', # notrans
-    'version' =>        '0.2',
+    'version' =>        '0.3',
     'name' =>           /* trans */ 'Attachments on the filesystem',
     'author' =>         'Jared Hancock',
     'description' =>    /* trans */ 'Enables storing attachments on the filesystem',

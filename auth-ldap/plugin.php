@@ -2,7 +2,7 @@
 set_include_path(get_include_path().PATH_SEPARATOR.dirname(__file__).'/include');
 return array(
     'id' =>             'auth:ldap', # notrans
-    'version' =>        '0.5',
+    'version' =>        '0.6',
     'name' =>           /* trans */ 'LDAP Authentication and Lookup',
     'author' =>         'Jared Hancock',
     'description' =>    /* trans */ 'Provides a configurable authentication backend
