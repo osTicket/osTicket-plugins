@@ -376,6 +376,10 @@ class PluginBuilder extends Module {
                         elseif ($f->isDir())
                             // Unnecessary
                             continue;
+                        elseif (preg_match('`/tests?/`i', $f->getPathname()))
+                            // Don't package tests
+                            // XXX: Add a option to override this
+                            continue;
                         $content = '';
                         $local = str_replace($full, $phar_path, $f->getPathname());
                         if ($options['compress'] && fnmatch('*.php', $f->getPathname())) {
@@ -414,6 +418,10 @@ class PluginBuilder extends Module {
                         $left = str_replace(dirname(__file__).'/', '', $source);
                         $right = str_replace(dirname(__file__).'/', '', $dest);
                         $this->stdout->write("Hydrating :: $left => $right\n");
+                    }
+                    if (is_file($source)) {
+                        copy($left, $right);
+                        continue;
                     }
                     foreach (
                         $iterator = new RecursiveIteratorIterator(
