@@ -3,9 +3,9 @@
 return array(
     'id' =>             'storage:s3',
     'version' =>        '0.2',
-    'name' =>           'Attachments hosted in Amazon S3',
+    'name' =>           /* trans */ 'Attachments hosted in Amazon S3',
     'author' =>         'Jared Hancock',
-    'description' =>    'Enables storing attachments in Amazon S3',
+    'description' =>    /* trans */ 'Enables storing attachments in Amazon S3',
     'url' =>            'http://www.osticket.com/plugins/storage-s3',
     'requires' => array(
         "symfony/class-loader" => array(

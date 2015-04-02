@@ -405,15 +405,22 @@ class LDAPAuthentication {
 class StaffLDAPAuthentication extends StaffAuthenticationBackend
         implements AuthDirectorySearch {
 
-    static $name = "Active Directory or LDAP";
+    static $name = /* trans */ "Active Directory or LDAP";
     static $id = "ldap";
 
     function __construct($config) {
         $this->_ldap = new LDAPAuthentication($config);
+        $this->config = $config;
     }
 
     function authenticate($username, $password=false, $errors=array()) {
         return $this->_ldap->authenticate($username, $password);
+    }
+
+    function getName() {
+        $config = $this->config;
+        list($__, $_N) = $config::translate();
+        return $__(static::$name);
     }
 
     function lookup($dn) {
@@ -439,13 +446,20 @@ class StaffLDAPAuthentication extends StaffAuthenticationBackend
 }
 
 class ClientLDAPAuthentication extends UserAuthenticationBackend {
-    static $name = "Active Directory or LDAP";
+    static $name = /* trans */ "Active Directory or LDAP";
     static $id = "ldap.client";
 
     function __construct($config) {
         $this->_ldap = new LDAPAuthentication($config, 'client');
+        $this->config = $config;
         if ($domain = $config->get('domain'))
             self::$name .= sprintf(' (%s)', $domain);
+    }
+
+    function getName() {
+        $config = $this->config;
+        list($__, $_N) = $config::translate();
+        return $__(static::$name);
     }
 
     function authenticate($username, $password=false, $errors=array()) {
