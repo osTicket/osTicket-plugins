@@ -30,7 +30,7 @@ class LdapConfig extends PluginConfig {
                 'hint' => $__('Default domain used in authentication and searches'),
                 'configuration' => array('size'=>40, 'length'=>60),
                 'validators' => array(
-                function($self, $val) {
+                function($self, $val) use ($__) {
                     if (strpos($val, '.') === false)
                         $self->addError(
                             $__('Fully-qualified domain name is expected'));
@@ -44,13 +44,13 @@ class LdapConfig extends PluginConfig {
                     point to the AD servers'),
                 'configuration' => array('size'=>40),
                 'validators' => array(
-                function($self, $val) {
+                function($self, $val) use ($__) {
                     if (!$val) return;
                     $servers = explode(',', $val);
                     foreach ($servers as $s) {
                         if (!Validator::is_ip(trim($s)))
                             $self->addError(sprintf(
-                                $__('%s: Expected an IP address', $s)));
+                                $__('%s: Expected an IP address'), $s));
                     }
                 }),
             )),
