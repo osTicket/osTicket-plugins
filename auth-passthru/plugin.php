@@ -2,7 +2,7 @@
 
 return array(
     'id' =>             'auth:passthru', # notrans
-    'version' =>        '0.1',
+    'version' =>        '0.2',
     'name' =>           /* trans */ 'HTTP Passthru Authentication',
     'author' =>         'Jared Hancock',
     'description' =>    /* trans */ 'Allows for the HTTP server (Apache or IIS) to perform

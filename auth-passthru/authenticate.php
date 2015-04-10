@@ -26,8 +26,13 @@ class HttpAuthentication extends StaffAuthenticationBackend {
                 list($domain, $username) = explode('\\', $username, 2);
             $username = trim(strtolower($username));
 
-            if (($user = new StaffSession($username)) && $user->getId())
+            if (($user = StaffSession::lookup($username)) && $user->getId()) {
+                if (!$user instanceof StaffSession) {
+                    // osTicket <= v1.9.7 or so
+                    $user = new StaffSession($user->getId());
+                }
                 return $user;
+            }
 
             // TODO: Consider client sessions
         }
