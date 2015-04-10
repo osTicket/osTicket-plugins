@@ -206,6 +206,11 @@ class LDAPAuthentication {
                     return $username;
                 case 'domain':
                     return $domain;
+                case 'search_base':
+                    if (!$config->get('search_base'))
+                        return 'dc=' . implode(',dc=',
+                            explode('.', $config->get('domain')));
+                    // Fall through to default
                 default:
                     return $config->get($match[1]);
                 }
@@ -359,8 +364,13 @@ class LDAPAuthentication {
     function lookupAndSync($username, $dn) {
         switch ($this->type) {
         case 'staff':
-            if (($user = new StaffSession($username)) && $user->getId())
+            if (($user = StaffSession::lookup($username)) && $user->getId()) {
+                if (!$user instanceof StaffSession) {
+                    // osTicket <= v1.9.7 or so
+                    $user = new StaffSession($user->getId());
+                }
                 return $user;
+            }
             break;
         case 'client':
             $c = $this->getConnection();
