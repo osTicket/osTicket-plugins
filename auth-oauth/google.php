@@ -45,10 +45,15 @@ class GoogleStaffAuthBackend extends ExternalStaffAuthenticationBackend {
     function signOn() {
         // TODO: Check session for auth token
         if (isset($_SESSION[':oauth']['email'])) {
-            if (($staff = new StaffSession($_SESSION[':oauth']['email']))
-                    && $staff->getId())
+            if (($staff = StaffSession::lookup(array('email' => $_SESSION[':oauth']['email'])))
+                && $staff->getId()
+            ) {
+                if (!$staff instanceof StaffSession) {
+                    // osTicket <= v1.9.7 or so
+                    $staff = new StaffSession($user->getId());
+                }
                 return $staff;
-
+            }
             else
                 $_SESSION['_staff']['auth']['msg'] = 'Have your administrator create a local account';
         }
