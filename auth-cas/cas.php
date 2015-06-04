@@ -82,7 +82,7 @@ class CasAuth {
 
 class CasStaffAuthBackend extends ExternalStaffAuthenticationBackend {
     static $id = "cas";
-    static $name = "CAS";
+    static $name = /* trans */ "CAS";
 
     static $service_name = "CAS";
 
@@ -92,6 +92,12 @@ class CasStaffAuthBackend extends ExternalStaffAuthenticationBackend {
         $this->config = $config;
         $this->cas = new CasAuth($config);
     }
+
+    function getName() {
+         $config = $this->config;
+         list($__, $_N) = $config::translate();
+         return $__(static::$name);
+     }
 
     function signOn() {
         if (isset($_SESSION[':cas']['user'])) {
@@ -119,7 +125,7 @@ class CasStaffAuthBackend extends ExternalStaffAuthenticationBackend {
 
 class CasClientAuthBackend extends ExternalUserAuthenticationBackend {
     static $id = "cas.client";
-    static $name = "CAS";
+    static $name = /* trans */ "CAS";
 
     static $service_name = "CAS";
 
@@ -127,6 +133,12 @@ class CasClientAuthBackend extends ExternalUserAuthenticationBackend {
         $this->config = $config;
         $this->cas = new CasAuth($config);
     }
+
+    function getName() {
+         $config = $this->config;
+         list($__, $_N) = $config::translate();
+         return $__(static::$name);
+     }
 
     function supportsInteractiveAuthentication() {
         return false;
