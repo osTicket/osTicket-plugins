@@ -544,7 +544,6 @@ if (defined('MAJOR_VERSION') && version_compare(MAJOR_VERSION, '1.10', '>=')) {
             Http::response(200, $avatar, 'image/jpeg', false);
         }
     }
-    AvatarSource::register('LdapAvatarSource');
 
     class LdapAvatar
     extends Avatar {
@@ -569,7 +568,9 @@ class LdapAuthPlugin extends Plugin {
             StaffAuthenticationBackend::register(new StaffLDAPAuthentication($config));
         if ($config->get('auth-client'))
             UserAuthenticationBackend::register(new ClientLDAPAuthentication($config));
-        if (class_exists('LdapAvatarSource'))
+        if (class_exists('LdapAvatarSource')) {
+            AvatarSource::register('LdapAvatarSource');
             LdapAvatarSource::registerUrl($config);
+        }
     }
 }
