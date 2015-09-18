@@ -143,7 +143,7 @@ class LdapConfig extends PluginConfig {
 
         if ($config['domain'] && !$config['servers']) {
             if (!($servers = LDAPAuthentication::autodiscover($config['domain'],
-                    preg_split('/,?\s+/', $config['dns']))))
+                    array_filter(preg_split('/,?\s+/', $config['dns'])))))
                 $this->getForm()->getField('servers')->addError(
                     $__("Unable to find LDAP servers for this domain. Try giving
                     an address of one of the DNS servers or manually specify
