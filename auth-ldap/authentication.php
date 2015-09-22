@@ -548,10 +548,14 @@ if (defined('MAJOR_VERSION') && version_compare(MAJOR_VERSION, '1.10', '>=')) {
     class LdapAvatar
     extends Avatar {
         function getUrl($size) {
+            $user = $this->user;
+            $acct = $user instanceof User
+                ? $this->user->getAccount()
+                : $user;
             return ROOT_PATH . 'api/ldap/avatar?'
                 .Http::build_query(array(
                     'email' => $this->user->getEmail(),
-                    'username' => $this->user->getUsername(),
+                    'username' => $acct ? $acct->getUsername() : '',
                 ));
         }
     }
