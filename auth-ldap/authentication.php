@@ -225,6 +225,7 @@ class LDAPAuthentication {
         if (!$this->_bind($c))
             return null;
 
+        $username = Net_LDAP2_Util::escape_filter_value($username);
         $r = $c->search(
             $this->getSearchBase(),
             str_replace(
@@ -288,6 +289,7 @@ class LDAPAuthentication {
                 $schema['username'],
             )))
         );
+        $lookup_dn = Net_LDAP2_Util::canonical_dn($lookup_dn);
         $r = $c->search($lookup_dn, '(objectClass=*)', $opts);
         if (PEAR::isError($r) || !$r->count())
             return null;
@@ -304,6 +306,7 @@ class LDAPAuthentication {
 
         $schema = static::$schemas[$this->getSchema($c)];
         $schema = $schema['user'];
+        $query = Net_LDAP2_Util::escape_filter_value($query);
         $r = $c->search(
             $this->getSearchBase(),
             str_replace('{q}', $query, $schema['search']),
