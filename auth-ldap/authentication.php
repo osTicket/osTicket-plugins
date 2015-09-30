@@ -76,9 +76,8 @@ class LDAPAuthentication {
         return $this->config;
     }
 
-    function autodiscover($domain, $dns=array()) {
+    static function lookupDnsWithServers($domain, $dns=array()) {
         require_once(PEAR_DIR.'Net/DNS2.php');
-        // TODO: Lookup DNS server from hosts file if not set
         $q = new Net_DNS2_Resolver();
         if ($dns)
             $q->setServers($dns);
@@ -98,12 +97,137 @@ class LDAPAuthentication {
                 'weight' => $srv->weight,
             );
         }
-        // Sort servers by priority ASC, then weight DESC
+        return $servers;
+    }
+
+    static function lookupDnsWindows($domain) {
+        $servers = array();
+        if (!($answers = dns_get_record('_ldap._tcp.'.$domain, DNS_SRV)))
+            return $servers;
+
+        foreach ($answers as $srv) {
+            $servers[] = array(
+                'host' => "{$srv['target']}:{$srv['port']}",
+                'priority' => $srv['pri'],
+                'weight' => $srv['weight'],
+            );
+        }
+        return $servers;
+    }
+
+    /**
+     * Discover Active Directory LDAP servers using DNS.
+     *
+     * Parameters:
+     * $domain - AD domain
+     * $dns - DNS server hints (optional)
+     * $closestOnly - Return at most one server which is definitely
+     *      available and represents the first to respond of all the servers
+     *      discovered in DNS.
+     *
+     * References:
+     * "DNS-Based Discovery" (Microsoft)
+     * https://msdn.microsoft.com/en-us/library/cc717360.aspx
+     */
+    static function autodiscover($domain, $dns=array(), $closestOnly=false) {
+        if (!$dns && stripos(PHP_OS, 'WIN') === 0) {
+            // Net_DNS2_Resolver won't work on windows servers without DNS
+            // specified
+            // TODO: Lookup DNS server from hosts file if not set 
+            $servers = self::lookupDnsWindows($domain);
+        }
+        else {
+            $servers = self::lookupDnsWithServers($domain, $dns);
+        }
+        // Sort by priority and weight
+        // priority ASC, then weight DESC
         usort($servers, function($a, $b) {
             return ($a['priority'] << 15) - $a['weight']
                 - ($b['priority'] << 15) + $b['weight'];
         });
+        // Locate closest domain controller (if requested)
+        if ($closestOnly) {
+            if ($idx = self::findClosestLdapServer($servers)) {
+                return array($servers[$idx]);
+            }
+        }
         return $servers;
+    }
+
+    /**
+     * Discover the closest LDAP server based on apparent TCP connect
+     * timing. This method will attempt parallel, asynchronous connections
+     * to all received LDAP servers and return the array index of the
+     * first-respodning server.
+     *
+     * Returns:
+     * (int|false|null) - index into the received servers list for the
+     * first-responding server. NULL if no servers responded in a few
+     * seconds, and FALSE if the socket extension is not loaded for this
+     * PHP setup.
+     *
+     * References:
+     * "Finding a Domain Controller in the Closest Site" (Microsoft)
+     * https://technet.microsoft.com/en-us/library/cc978016.aspx
+     *
+     * "here's how you can implement timeouts with the socket functions"
+     * (PHP, rbarnes at fake dot com)
+     * http://us3.php.net/manual/en/function.socket-connect.php#84465
+     */
+    static function findClosestLdapServer($servers, $defl_port=389) {
+        if (!function_exists('socket_create'))
+            return false;
+
+        $sockets = array();
+        reset($servers);
+        $closest = null;
+        $loops = 60; # 6 seconds max
+        while (!$closest && $loops--) {
+            list($i, $S) = each($servers);
+            if ($S) {
+                // Add another socket to the list
+                // Lookup IP address for host
+                list($host, $port) = explode(':', $S['host'], 2);
+                if (!@inet_pton($host)) {
+                    if ($host == ($ip = gethostbyname($host))) {
+                        continue;
+                    }
+                    $host = $ip;
+                }
+                // Start an async connect to this server
+                if (!($sk = socket_create(AF_INET, SOCK_STREAM, SOL_TCP)))
+                    continue;
+
+                socket_set_nonblock($sk);
+
+                $sockets[$i] = array($sk, $host, $port ?: $defl_port);
+            }
+            // Look for a successful connection
+            foreach ($sockets as $i=>$X) {
+                list($sk, $host, $port) = $X;
+                if (@socket_connect($sk, $host, $port)) {
+                    // Connected!!!
+                    $closest = $i;
+                    break;
+                }
+                else {
+                    $error = socket_last_error();
+                    if (!in_array($error, array(SOCKET_EINPROGRESS, SOCKET_EALREADY))) {
+                        // Bad mojo
+                        socket_close($sk);
+                        unset($sockets,$i);
+                    }
+                }
+            }
+            // Microsoft recommends waiting 0.1s; however, we're in the
+            // business of providing quick response times
+            usleep(2000);
+        }
+        foreach ($sockets as $X) {
+            list($sk) = $X;
+            socket_close($sk);
+        }
+        return $closest;
     }
 
     function getServers() {
@@ -111,7 +235,8 @@ class LDAPAuthentication {
                 || !($servers = preg_split('/\s+/', $servers))) {
             if ($domain = $this->getConfig()->get('domain')) {
                 $dns = preg_split('/,?\s+/', $this->getConfig()->get('dns'));
-                return $this->autodiscover($domain, array_filter($dns));
+                return self::autodiscover($domain, array_filter($dns),
+                    true);
             }
         }
         if ($servers) {
@@ -150,6 +275,11 @@ class LDAPAuthentication {
         }
 
         foreach ($this->getServers() as $s) {
+            @list($host, $port) = explode(':', $s['host'], 2);
+            if ($port) {
+                $s['port'] = $port;
+                $s['host'] = $host;
+            }
             $params = $defaults + $s;
             $c = new Net_LDAP2($params);
             $r = $c->bind();
