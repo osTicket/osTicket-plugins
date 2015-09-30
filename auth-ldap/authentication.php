@@ -500,9 +500,15 @@ if (defined('MAJOR_VERSION') && version_compare(MAJOR_VERSION, '1.10', '>=')) {
             static::$config = $config;
             Signal::connect('api', function($dispatcher) {
                 $dispatcher->append(
-                    url_get('^/ldap/avatar$', array('LdapAvatarSource', 'fetchAvatar'))
+                    url_get('^/ldap/avatar$', array('LdapAvatarSource', 'tryFetchAvatar'))
                 );
             });
+        }
+
+        static function tryFetchAvatar() {
+            static::fetchAvatar();
+            // if fetchAvatar is successful, then it won't return
+            Http::redirect(ROOT_PATH.'images/mystery-oscar.png');
         }
 
         static function fetchAvatar() {
