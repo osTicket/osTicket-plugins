@@ -129,7 +129,9 @@ class LDAPAuthentication {
      * "DNS-Based Discovery" (Microsoft)
      * https://msdn.microsoft.com/en-us/library/cc717360.aspx
      */
-    static function autodiscover($domain, $dns=array(), $closestOnly=false) {
+    static function autodiscover($domain, $dns=array(), $closestOnly=false,
+        $config=null
+    ) {
         if (!$dns && stripos(PHP_OS, 'WIN') === 0) {
             // Net_DNS2_Resolver won't work on windows servers without DNS
             // specified
@@ -147,7 +149,7 @@ class LDAPAuthentication {
         });
         // Locate closest domain controller (if requested)
         if ($closestOnly) {
-            if ($idx = self::findClosestLdapServer($servers)) {
+            if ($idx = self::findClosestLdapServer($servers, $config)) {
                 return array($servers[$idx]);
             }
         }
@@ -174,15 +176,51 @@ class LDAPAuthentication {
      * (PHP, rbarnes at fake dot com)
      * http://us3.php.net/manual/en/function.socket-connect.php#84465
      */
-    static function findClosestLdapServer($servers, $defl_port=389) {
+    static function findClosestLdapServer($servers, $config=false,
+        $defl_port=389
+    ) {
         if (!function_exists('socket_create'))
             return false;
 
-        $sockets = array();
+        // If there's only one selection, then it must be the fastest
         reset($servers);
+        if (count($servers) < 2)
+            return key($servers);
+
+        // Start with last-used closest server
+        if ($config && ($T = $config->get('closest'))) {
+            foreach ($servers as $i=>$S) {
+                if ($T == $S['host']) {
+                    // Move this server to the front of the list (but don't
+                    // change the indexing
+                    $servers = array($i=>$S) + $servers;
+                    break;
+                }
+            }
+        }
+
+        $sockets = array();
         $closest = null;
-        $loops = 60; # 6 seconds max
+        $loops = 100; # ~50ms seconds max
         while (!$closest && $loops--) {
+            // Look for a successful connection
+            foreach ($sockets as $i=>$X) {
+                list($sk, $host, $port) = $X;
+                if (@socket_connect($sk, $host, $port)) {
+                    // Connected!!!
+                    $closest = $i;
+                    break;
+                }
+                else {
+                    $error = socket_last_error();
+                    if (!in_array($error, array(SOCKET_EINPROGRESS, SOCKET_EALREADY))) {
+                        // Bad mojo
+                        socket_close($sk);
+                        unset($sockets,$i);
+                    }
+                }
+            }
+            // Look for anothe rserver
             list($i, $S) = each($servers);
             if ($S) {
                 // Add another socket to the list
@@ -202,30 +240,17 @@ class LDAPAuthentication {
 
                 $sockets[$i] = array($sk, $host, $port ?: $defl_port);
             }
-            // Look for a successful connection
-            foreach ($sockets as $i=>$X) {
-                list($sk, $host, $port) = $X;
-                if (@socket_connect($sk, $host, $port)) {
-                    // Connected!!!
-                    $closest = $i;
-                    break;
-                }
-                else {
-                    $error = socket_last_error();
-                    if (!in_array($error, array(SOCKET_EINPROGRESS, SOCKET_EALREADY))) {
-                        // Bad mojo
-                        socket_close($sk);
-                        unset($sockets,$i);
-                    }
-                }
-            }
             // Microsoft recommends waiting 0.1s; however, we're in the
             // business of providing quick response times
-            usleep(2000);
+            usleep(500);
         }
         foreach ($sockets as $X) {
             list($sk) = $X;
             socket_close($sk);
+        }
+        // Save closest server for faster response next time
+        if ($config) {
+            $config->set('closest', $servers[$closest]['host']);
         }
         return $closest;
     }
@@ -236,7 +261,7 @@ class LDAPAuthentication {
             if ($domain = $this->getConfig()->get('domain')) {
                 $dns = preg_split('/,?\s+/', $this->getConfig()->get('dns'));
                 return self::autodiscover($domain, array_filter($dns),
-                    true);
+                    true, $this->getConfig());
             }
         }
         if ($servers) {
