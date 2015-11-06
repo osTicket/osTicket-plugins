@@ -21,7 +21,7 @@ class IpAuthConfig extends PluginConfig {
             'auth' => new SectionBreakField(array(
                 'label' => $__('Authentication Modes'),
                 'hint' => $__('Authentication mode for clients. Clients
-                    can be identifie via their IP Address.'),
+                    can be identified via their IP address.'),
             )),
             'auth-client' => new BooleanField(array(
                 'label' => $__('Client Authentication'),

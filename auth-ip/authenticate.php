@@ -12,7 +12,7 @@ class UserIpAuthentication extends UserAuthenticationBackend {
 
     function signOn() {
         if (isset($_SERVER['REMOTE_ADDR']) && !empty($_SERVER['REMOTE_ADDR'])) {
-        
+
             $username = $_SERVER['REMOTE_ADDR'];
         
             if ($acct = ClientAccount::lookupByUsername($username)) {
