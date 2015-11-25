@@ -12,9 +12,11 @@ class UserIpAuthentication extends UserAuthenticationBackend {
 
     function signOn() {
         if (isset($_SERVER['REMOTE_ADDR']) && !empty($_SERVER['REMOTE_ADDR'])) {
-
-            $username = $_SERVER['REMOTE_ADDR'];
-        
+            if (isset($_GET['ddns']) && !empty($_GET['ddns']) && $_SERVER['REMOTE_ADDR'] === gethostbyname($_GET['ddns'])) {
+                $username = $_GET['ddns'];
+            } else {
+                $username = $_SERVER['REMOTE_ADDR'];
+            }
             if ($acct = ClientAccount::lookupByUsername($username)) {
                 if (($client = new ClientSession(new EndUser($acct->getUser())))
                         && $client->getId())
@@ -29,7 +31,7 @@ class UserIpAuthentication extends UserAuthenticationBackend {
                 foreach ($users as $u) {
                     if (0 === strcasecmp($u['username'], $username)
                             || 0 === strcasecmp($u['email'], $username))
-                        // User information matches IP address
+                        // User information is valid
                         return new ClientCreateRequest($this, $username, $u);
                 }
             }
@@ -48,3 +50,4 @@ class IpAuthPlugin extends Plugin {
             UserAuthenticationBackend::register('UserIpAuthentication');
     }
 }
+
