@@ -12,7 +12,9 @@ class UserIpAuthentication extends UserAuthenticationBackend {
 
     function signOn() {
         if (isset($_SERVER['REMOTE_ADDR']) && !empty($_SERVER['REMOTE_ADDR'])) {
-            if (isset($_GET['ddns']) && !empty($_GET['ddns']) && $_SERVER['REMOTE_ADDR'] === gethostbyname($_GET['ddns'])) {
+            if (isset($_GET['token']) && !empty($_GET['token']) && iconv_strlen($_GET['token']) == 12) {
+                $username = $_GET['token'];
+            } else if (isset($_GET['ddns']) && !empty($_GET['ddns']) && $_SERVER['REMOTE_ADDR'] === gethostbyname($_GET['ddns'])) {
                 $username = $_GET['ddns'];
             } else {
                 $username = $_SERVER['REMOTE_ADDR'];
@@ -50,4 +52,3 @@ class IpAuthPlugin extends Plugin {
             UserAuthenticationBackend::register('UserIpAuthentication');
     }
 }
-
