@@ -232,10 +232,9 @@ class S3StoragePlugin extends Plugin {
     }
 }
 
-require_once dirname(__file__)
-    .'/lib/Symfony/Component/ClassLoader/UniversalClassLoader.php';
-use Symfony\Component\ClassLoader\UniversalClassLoader;
-$loader = new UniversalClassLoader();
+require_once INCLUDE_DIR . 'UniversalClassLoader.php';
+use Symfony\Component\ClassLoader\UniversalClassLoader_osTicket;
+$loader = new UniversalClassLoader_osTicket();
 $loader->registerNamespaceFallbacks(array(
     dirname(__file__).'/lib'));
 $loader->register();
