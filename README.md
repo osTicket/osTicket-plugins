@@ -14,6 +14,17 @@ dependencies.
 
     php make.php hydrate
 
+Building Plugins
+================
+Make any necessary additions or edits to plugins and build PHAR files with
+the `make.php` command
+
+    php -dphar.readonly=0 make.php build <plugin-folder>
+
+This will compile a PHAR file for the plugin directory. The PHAR will be
+named `plugin.phar` and can be dropped into the osTicket `plugins/` folder
+directly.
+
 Translating
 ===========
 
