@@ -685,7 +685,7 @@ EOF;
 
         $this->ensureComposer();
 
-        $php = defined('PHP_BINARY') ? PHP_BINARY : 'php';
+        $php = defined("'PHP_BINARY'") ? PHP_BINARY : 'php';
         if (file_exists(dirname(__file__)."/composer.lock")) {
             if ($autoupdate)
                 passthru($php." ".dirname(__file__)."/composer.phar -v update");
