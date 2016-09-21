@@ -33,4 +33,4 @@ Translating
 Translation service is being performed via the Crowdin translation
 management software. The project page for the plugins is located at
 
-http://i18n.osticket.com/projects/osticket-plugins
+https://crowdin.com/project/osticket-plugins
