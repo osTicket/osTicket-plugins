@@ -152,8 +152,7 @@ class LDAPAuthentication {
         foreach ($this->getServers() as $s) {
             $params = $defaults + $s;
             $c = new Net_LDAP2($params);
-            $r = $c->bind();
-            if (!PEAR::isError($r)) {
+            if ($this->_bind($c)) {
                 $connection = $c;
                 return $c;
             }
