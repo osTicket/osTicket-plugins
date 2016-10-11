@@ -666,7 +666,7 @@ class PluginBuilder extends Module {
     "repositories": [
         {
             "type": "pear",
-            "url": "http://pear.php.net"
+            "url": "https://pear.php.net"
         }
     ],
     "require": %s,
