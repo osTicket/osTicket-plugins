@@ -10,12 +10,4 @@ return array(
     tickets by guests as well as client registration',
     'url' =>            'http://www.osticket.com/plugins/field/recaptcha',
     'plugin' =>         'field.php:reCaptchaPlugin',
-    'requires' => array(
-        "recaptcha-lib/recaptcha" => array(
-            'version' => "*",
-            'map' => array(
-                "recaptcha-lib/recaptcha/lib" => "lib",
-            ),
-        ),
-    ),
 );

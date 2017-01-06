@@ -23,6 +23,12 @@ class reCaptchaConfig extends PluginConfig {
 
     function pre_save($config, &$errors) {
         // Todo: verify key
+
+        if (!function_exists('curl_init')) {
+            Messages::error('CURL extension is required');
+            return false;
+        }
+
         global $msg;
         if (!$errors)
             $msg = 'Successfully updated reCAPTCHA settings';
