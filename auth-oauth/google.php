@@ -11,12 +11,12 @@ class GoogleAuth {
     }
 
     function triggerAuth() {
+        global $ost;
         $self = $this;
         return Auth2::legs(3)
             ->set('id', $this->config->get('g-client-id'))
             ->set('secret', $this->config->get('g-client-secret'))
-            ->set('redirect', 'http://' . $_SERVER['HTTP_HOST']
-                . ROOT_PATH . 'api/auth/ext')
+            ->set('redirect', rtrim($ost->getConfig()->getURL(), '/') . '/api/auth/ext')
             ->set('scope', 'profile email')
 
             ->authorize('https://accounts.google.com/o/oauth2/auth')
@@ -148,5 +148,3 @@ class GoogleClientAuthBackend extends ExternalUserAuthenticationBackend {
         );
     }
 }
-
-
