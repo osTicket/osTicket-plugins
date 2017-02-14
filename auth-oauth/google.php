@@ -2,6 +2,19 @@
 
 use ohmy\Auth2;
 
+function isEmailAllowed($email, $domains_string) {
+    $email_domain = end(explode('@', $email, 2));
+    $domains = explode(',', $domains_string);
+
+    foreach ($domains as $domain) {
+        if (strcasecmp($email_domain, trim($domain)) === 0) {
+            return TRUE;
+        }
+    }
+
+    return strlen(trim($domains_string)) === 0;
+}
+
 class GoogleAuth {
     var $config;
     var $access_token;
@@ -45,7 +58,10 @@ class GoogleStaffAuthBackend extends ExternalStaffAuthenticationBackend {
     function signOn() {
         // TODO: Check session for auth token
         if (isset($_SESSION[':oauth']['email'])) {
-            if (($staff = StaffSession::lookup(array('email' => $_SESSION[':oauth']['email'])))
+            if (!isEmailAllowed($_SESSION[':oauth']['email'], $this->config->get(
+                'g-allowed-domains-agents')))
+                $_SESSION['_staff']['auth']['msg'] = 'Login with this email address is not permitted';
+            else if (($staff = StaffSession::lookup(array('email' => $_SESSION[':oauth']['email'])))
                 && $staff->getId()
             ) {
                 if (!$staff instanceof StaffSession) {
@@ -98,14 +114,17 @@ class GoogleClientAuthBackend extends ExternalUserAuthenticationBackend {
     }
 
     function signOn() {
+        global $errors;
         // TODO: Check session for auth token
         if (isset($_SESSION[':oauth']['email'])) {
-            if (($acct = ClientAccount::lookupByUsername($_SESSION[':oauth']['email']))
+            if (!isEmailAllowed($_SESSION[':oauth']['email'], $this->config->get(
+                'g-allowed-domains-clients')))
+                $errors['err'] = 'Login with this email address is not permitted';
+            else if (($acct = ClientAccount::lookupByUsername($_SESSION[':oauth']['email']))
                     && $acct->getId()
                     && ($client = new ClientSession(new EndUser($acct->getUser()))))
                 return $client;
-
-            elseif (isset($_SESSION[':oauth']['profile'])) {
+            else if (isset($_SESSION[':oauth']['profile'])) {
                 // TODO: Prepare ClientCreateRequest
                 $profile = $_SESSION[':oauth']['profile'];
                 $info = array(

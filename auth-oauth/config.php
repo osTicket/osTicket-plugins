@@ -39,6 +39,14 @@ class OauthPluginConfig extends PluginConfig {
                 'label' => $__('Client Secret'),
                 'configuration' => array('size'=>60, 'length'=>100),
             )),
+            'g-allowed-domains-agents' => new TextboxField(array(
+                'label' => $__('Allowed Domains for Agents'),
+                'configuration' => array('size'=>60, 'length'=>100),
+            )),
+            'g-allowed-domains-clients' => new TextboxField(array(
+                'label' => $__('Allowed Domains for Clients'),
+                'configuration' => array('size'=>60, 'length'=>100),
+            )),
             'g-enabled' => clone $modes,
         );
     }
