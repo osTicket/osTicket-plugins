@@ -35,6 +35,7 @@ class S3StoragePluginConfig extends PluginConfig {
                     'ap-southeast-2' => 'Asia Pacific (Sydney) Region',
                     'ap-northeast-1' => 'Asia Pacific (Tokyo) Region',
                     'sa-east-1' => 'South America (Sao Paulo) Region',
+                    'ap-south-1' => 'Asia Pacific (Mumbai)',
                 ),
                 'default' => '',
             )),
