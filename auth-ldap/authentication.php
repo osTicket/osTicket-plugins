@@ -149,7 +149,14 @@ class LDAPAuthentication {
         });
         // Locate closest domain controller (if requested)
         if ($closestOnly) {
-            if ($idx = self::findClosestLdapServer($servers, $config)) {
+            // If there are no servers from DNS, but there is one saved in the
+            // config, return that one
+            if (count($servers) === 0
+                && $config && ($T = $config->get('closest'))
+            ) {
+                return array($T);
+            }
+            if (is_int($idx = self::findClosestLdapServer($servers, $config))) {
                 return array($servers[$idx]);
             }
         }
