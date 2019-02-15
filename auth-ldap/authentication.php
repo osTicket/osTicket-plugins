@@ -223,11 +223,11 @@ class LDAPAuthentication {
                     if (!in_array($error, array(SOCKET_EINPROGRESS, SOCKET_EALREADY))) {
                         // Bad mojo
                         socket_close($sk);
-                        unset($sockets,$i);
+                        unset($sockets[$i]);
                     }
                 }
             }
-            // Look for anothe rserver
+            // Look for another server
             list($i, $S) = each($servers);
             if ($S) {
                 // Add another socket to the list
