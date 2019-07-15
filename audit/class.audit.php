@@ -305,7 +305,7 @@ class AuditEntry extends VerySimpleModel {
         'thread_view_order' => 'Thread View Order',
         'default_ticket_queue_id' => 'Default Ticket Queue',
         'reply_redirect' => 'Reply Redirect',
-        // 'isactive' => 'Locked', //adriane: can we change this to islocked?
+        'islocked' => 'Locked',
         'isadmin' => 'Administrator',
         'assigned_only' => 'Limit Access to Assigned',
         'onvacation' => 'Vacation Mode',
@@ -558,17 +558,30 @@ class AuditEntry extends VerySimpleModel {
       $model = AuditEntry::getTypeExtra($event['object_type'], 'Model');
       $objectName = AuditEntry::getObjectName($model);
       $link = $event['object_type'] ? AuditEntry::getObjectLink($event) : '';
+      $eventName = Event::getNameById($event['event_id']);
       $description = sprintf(__('%s <strong>%s</strong> %s %s %s'),
-                     $userType, $name, Event::getNameById($event['event_id']), $objectName, $link);
+                     $userType, $name, $eventName, $objectName, $link);
 
-      switch (Event::getNameById($event['event_id'])) {
+      switch ($eventName) {
+        case 'message':
+            $message = sprintf(__('%s <strong>%s</strong> posted a %s to %s %s'),
+                           $userType, $name, $userType == 'Agent' ? 'reply' : 'message', $objectName, $link);
+            break;
+        case 'note':
+            $message = sprintf(__('%s <strong>%s</strong> posted a %s to %s %s'),
+                           $userType, $name, $eventName, $objectName, $link);
+            break;
         case 'collab':
           $msg = $data['add'] ? 'Added ' : 'Deleted ';
           $data = $data['add'] ?: $data['del'];
+          $name = array();
+          $i = 0;
           foreach ($data as $key => $value) {
-            if (is_numeric($key))
-                $name = $value['name'];
+            if (is_numeric($key) && $i < 5)
+                $name[] = ($i < 4) ? $value['name'] : $value['name'] . '...';
+            $i++;
           }
+          $name = implode(',', $name);
           $message = sprintf(__('%s <strong>%s</strong> %s Collaborator(s): <strong>%s</strong> Ticket: %s'), $userType, $person, $msg, $name, $link);
           break;
         case 'edited':
@@ -593,7 +606,7 @@ class AuditEntry extends VerySimpleModel {
                         } else {
                             $field[0] = ucfirst($key);
                         }
-                        $message = sprintf(__('%s <strong>Edited Field(s):</strong> %s <strong>%s: %s</strong> '),
+                        $message = sprintf(__('%s <strong>%s</strong> Edited Field(s): %s <strong>%s: %s</strong> '), $userType,
                                     $name ?: $userType,
                                     !empty($fields) ? implode(',',$fields) : ($field[0] ?: '-'),
                                     $objectName, $link);
@@ -632,9 +645,10 @@ class AuditEntry extends VerySimpleModel {
 
             if ($key != 'name' && $value)
                 $msg = sprintf(__('%s to %s <strong>%s</strong>'), $description, self::getObjectName(ucfirst($key)), $assignee);
-
             if ($key == 'claim')
               $msg = sprintf(__('Agent <strong>%s</strong> Claimed %s'),$name ?: 'Agent', $link);
+            if ($key == 'auto')
+              $msg = sprintf(__('Agent <strong>SYSTEM</strong> Auto Assigned %s to <strong>%s</strong>'),$link, $name ?: 'Agent');
           }
           $message = __($msg ?: Event::getNameById($event['event_id']));
           break;
@@ -643,25 +657,6 @@ class AuditEntry extends VerySimpleModel {
           break;
       }
       return $export ? strip_tags($message) : $message;
-    }
-
-    function getDataName($event) {
-        $data = json_decode($event->data, true);
-        if (!$data['name']) {
-            $rows = AuditEntry::objects()
-            ->filter(array('object_id'=>$event->object_id))
-            ->values_flat('data');
-            foreach ($rows as $key => $value) {
-                $val = json_decode($value[0], true);
-                if (array_key_exists('name', $val)) {
-                    $data['name'] = $val['name'];
-                    break;
-                }
-                else
-                $data['name'] = __('NA');
-            }
-        }
-        return $data['name'];
     }
 
     function getDataById($id, $type) {
@@ -747,13 +742,15 @@ class AuditEntry extends VerySimpleModel {
                   $event_id = Event::getIdByName($info['type']);
                   break;
               default:
-                  if (!$thisstaff && !$thisclient)
-                    $person = __('User');
+                  if (is_null($thisstaff) && is_null($thisclient) && get_class($object) == 'Ticket') {
+                      $person = $object->getUser()->getName()->name;
+                  } elseif (is_null($thisstaff) && is_null($thisclient))
+                    $person = __('SYSTEM');
 
                   $name = $object ? call_user_func(array($object, $data[1])) : '';
                   $data = array('name' => is_object($name) ? $name->name : $name,
-                                'person' => $person ?: $thisstaff ? $thisstaff->getName()->name :
-                                                       $thisclient->getName()->name);
+                                'person' => $person ? $person : ($thisstaff ? $thisstaff->getName()->name :
+                                                       $thisclient->getName()->name));
                   foreach ($info as $key => $value) {
                      if ($key != 'type')
                         $data[$key] = $value;
@@ -765,6 +762,11 @@ class AuditEntry extends VerySimpleModel {
           }
         }
       }
+      if (!is_object($object)) {
+        $info['data'] = json_encode($object);
+        $event_id = Event::getIdByName($info['type']);
+      }
+
       return static::auditEvent($event_id, $object, $info);
     }
 
@@ -782,7 +784,8 @@ class AuditEntry extends VerySimpleModel {
             $sql = sprintf('INSERT INTO `%s` VALUES
                 ("", "login",""),
                 ("", "logout",""),
-                ("", "message","")', TABLE_PREFIX.'event');
+                ("", "message",""),
+                ("", "note","")', TABLE_PREFIX.'event');
             db_query($sql);
 
             $sql = sprintf('CREATE TABLE `%s` (
