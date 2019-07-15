@@ -94,10 +94,12 @@ $(function() {
         }
         return false;
      });
-     //override pjax:complete to keep showing overlay
+     //override pjax:complete to keep showing overlay on pagination
      $(document).on('pjax:complete', function() {
-         $.toggleOverlay(true);
-         $('#overlay').show();
+         if ($('#popup').is(':visible')) {
+             $.toggleOverlay(true);
+             $('#overlay').show();
+         }
      });
 });
 </script>
