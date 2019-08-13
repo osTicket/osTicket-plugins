@@ -142,18 +142,34 @@ $pageNav->setURL('audits.php', $args);
    </table>
 <?php
 echo '<div>';
-if ($total) { //Show options..
+if ($total) //Show options..
     echo '&nbsp;'.__('Page').':'.$pageNav->getPageLinks().'&nbsp;';
-}
-echo sprintf('<a class="export-csv no-pjax" href="?%s">%s</a>',
-        Http::build_query(array(
-                'a'         => 'export',
-                't'         => 'audits',
-                'type'      => $type,
-                'state'     => $state,
-                'starttime' => $_REQUEST['startDate'],
-                'endtime'   => $_REQUEST['endDate'],
-            )),
-        __('Export'));
+echo sprintf('<a class="export-audit-csv no-pjax" href="#">%s</a>', __('Export'));
 ?>
 </form>
+
+<script type="text/javascript">
+$(function() {
+    $('a.export-audit-csv').on('click', function(){
+        showExportPopup("<?php echo __('Audit Export'); ?>",
+          '<i class="icon-spinner icon-spin icon-large"></i>&nbsp;&nbsp;'
+          + "<?php echo __('Please wait while we generate the export.'); ?>"
+        );
+        $.ajax({
+            type: "POST",
+            url: 'ajax.php/audit/export/build/<?php echo $type; ?>/<?php echo $state; ?>'
+        });
+        var popopts = {
+            title: "<?php echo __('Audit Export'); ?>",
+            content: "<?php echo sprintf(
+              __('The export has been sent to your email address at <b>%s</b>.'),
+              $thisstaff->getEmail()); ?>",
+        };
+        checkExportStatus(
+            'ajax.php/audit/export/status',
+            'ajax.php/audit/export/',
+            popopts
+        );
+    });
+});
+</script>

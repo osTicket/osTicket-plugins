@@ -70,6 +70,87 @@ class AuditPlugin extends Plugin {
                 })
             );
         });
+
+        Signal::connect('ajax.scp', function($dispatcher) {
+            $dispatcher->append(
+                url('^/audit/export/build/(?P<type>\w+)/(?P<state>\w+)|uid,(?P<uid>\d+)|sid,(?P<sid>\d+)|tid,(?P<tid>\d+)$',
+                function($type=NULL, $state=NULL, $uid=NULL, $sid=NULL, $tid=NULL) {
+                    global $thisstaff;
+
+                    if (!$thisstaff)
+                        Http::response(403, 'Agent login is required');
+
+                    $show = AuditEntry::$show_view_audits;
+                    if ($type) {
+                        foreach (AuditEntry::getTypes() as $abbrev => $info) {
+                            if ($type == $abbrev)
+                               $name = AuditEntry::getObjectName($info[0]);
+                        }
+                        $filename = sprintf('%s-audits-%s.csv', $name, strftime('%Y%m%d'));
+                        Export::audits('audit', $type, $state, $filename, '', '', 'csv', $show);
+                    } elseif ($uid) {
+                        $userName = User::getNameById($uid);
+                        $filename = sprintf('%s-audits-%s.csv', $userName->name, strftime('%Y%m%d'));
+                        Export::audits('user', '', '', $filename, $tableInfo, $uid, 'csv', $show);
+                    } elseif ($sid) {
+                        $staff = Staff::lookup($sid);
+                        $filename = sprintf('%s-audits-%s.csv', $staff->getName(), strftime('%Y%m%d'));
+                        Export::audits('staff', '', '', $filename, $tableInfo, $sid, 'csv', $show);
+                    } elseif ($tid) {
+                        $ticket = Ticket::lookup($tid);
+                        $filename = sprintf('%s-audits-%s.csv', $ticket->getNumber(), strftime('%Y%m%d'));
+                        Export::audits('ticket', '', '', $filename, $tableInfo, $tid, 'csv', $show);
+                    }
+                })
+            );
+        });
+
+        Signal::connect('ajax.scp', function($dispatcher) {
+            $dispatcher->append(
+                url('^/audit/export/status$', function() {
+                    if(!($maxtime = ini_get('max_execution_time')))
+                        $maxtime = 30;
+
+                    if ($_SESSION['export']['end']) {
+                        if (intval($_SESSION['export']['end'] - $_SESSION['export']['start']) >= $maxtime) {
+                            $response = array('status' => 'email');
+                        } else {
+                            $response = array(
+                                'status' => 'download',
+                                'filename' => $_SESSION['export']['filename'],
+                            );
+                        }
+                    } else
+                        $response = array('status' => 'writing');
+                    return JsonDataEncoder::encode($response);
+                })
+            );
+        });
+
+        Signal::connect('ajax.scp', function($dispatcher) {
+            $dispatcher->append(
+                url('^/audit/export/(?P<status>email|download)$', function($status) {
+                    global $thisstaff;
+
+                    if (!$status)
+                        Http::response(403, 'Export status is required');
+
+                    $filepath = $_SESSION['export']['tempath'];
+                    $filename = $_SESSION['export']['filename'];
+                    unset($_SESSION['export']);
+                    if ($status === 'download') {
+                        Http::download($filename, 'text/csv');
+                        $file = readfile($filepath);
+                        fclose($filepath);
+                        exit();
+                    } elseif ($status === 'email') {
+                        Mailer::sendExportEmail($filename, $filepath, $thisstaff, 'audit');
+                        fclose($filepath);
+                    } else
+                        Http::response(403, 'Unknown action');
+                })
+            );
+        });
 }
 
     function enable() {

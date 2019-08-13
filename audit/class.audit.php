@@ -569,7 +569,7 @@ class AuditEntry extends VerySimpleModel {
             break;
         case 'note':
             $message = sprintf(__('%s <strong>%s</strong> posted a %s to %s %s'),
-                           $userType, $name, $eventName, $objectName, $link);
+                $userType, $name, $eventName, $objectName, $link);
             break;
         case 'collab':
           $msg = $data['add'] ? 'Added ' : 'Deleted ';

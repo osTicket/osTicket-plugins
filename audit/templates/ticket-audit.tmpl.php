@@ -13,6 +13,7 @@ $qstr = Http::build_query($qs);
 $qstrReverse = Http::build_query($qsReverse);
 $url = '#audit/ticket/' . $ticketId . '/view?';
 $qstr = sprintf('%s&sort=timestamp', $qstr);
+$number = Ticket::objects()->filter(array('ticket_id'=>$ticketId))->values_flat('number')->first();
  ?>
 <div id="ticket-audit-p1" style="display:block;">
 <h3><?php echo __('Ticket History'); ?></h3>
@@ -56,12 +57,7 @@ $links = str_replace('tickets.php?&amp;', $url, $links);
 $links = str_replace('?p', '?'.$qstr.'&p', $links);
     echo '<div>';
     echo '&nbsp;'.__('Page').':'.$links.'&nbsp;';
-    echo sprintf('<a class="export-csv no-pjax" href="?%s">%s</a>',
-            Http::build_query(array(
-                    'id' => $ticketId,
-                    'a' => 'export',
-                    't' => 'audits')),
-            __('Export'));
+    echo sprintf('<a class="export-audit-csv no-pjax" href="#">%s</a>', __('Export'));
     echo '</div>';
 ?>
 <p class="full-width">
@@ -94,12 +90,36 @@ $(function() {
         }
         return false;
      });
+
+
      //override pjax:complete to keep showing overlay on pagination
      $(document).on('pjax:complete', function() {
          if ($('#popup').is(':visible')) {
              $.toggleOverlay(true);
              $('#overlay').show();
          }
+     });
+
+     $('a.export-audit-csv').on('click', function(){
+         showExportPopup("<?php echo __('Ticket Audit Export'); ?>",
+           '<i class="icon-spinner icon-spin icon-large"></i>&nbsp;&nbsp;'
+           + "<?php echo __('Please wait while we generate the export.'); ?>"
+         );
+         $.ajax({
+             type: "POST",
+             url: 'ajax.php/audit/export/build/tid,<?php echo $ticketId; ?>'
+         });
+         var popopts = {
+             title: "<?php echo sprintf(__('%s Export'), $number[0]); ?>",
+             content: "<?php echo sprintf(
+               __('The export has been sent to your email address at <b>%s</b>.'),
+               $thisstaff->getEmail()); ?>",
+         };
+         checkExportStatus(
+             'ajax.php/audit/export/status',
+             'ajax.php/audit/export/',
+             popopts
+         );
      });
 });
 </script>

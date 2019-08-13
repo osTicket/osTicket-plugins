@@ -57,12 +57,32 @@ $pageNav->setURL('staff.php', $args);
 <?php
     echo '<div>';
     echo '&nbsp;'.__('Page').':'.$pageNav->getPageLinks('audits').'&nbsp;';
-    echo sprintf('<a class="export-csv no-pjax" href="?%s">%s</a>',
-            Http::build_query(array(
-                    'id' => $staff->getId(),
-                    'a' => 'export',
-                    't' => 'audits')),
-            __('Export'));
+    echo sprintf('<a class="export-audit-csv no-pjax" href="#">%s</a>', __('Export'));
     echo '</div>';
 }
 ?>
+<script type="text/javascript">
+$(function() {
+    $('a.export-audit-csv').on('click', function(){
+        showExportPopup("<?php echo __('User Audit Export'); ?>",
+          '<i class="icon-spinner icon-spin icon-large"></i>&nbsp;&nbsp;'
+          + "<?php echo __('Please wait while we generate the export.'); ?>"
+        );
+        $.ajax({
+            type: "POST",
+            url: 'ajax.php/audit/export/build/sid,<?php echo $staff->getId(); ?>'
+        });
+        var popopts = {
+            title: "<?php echo sprintf(__('%s Export'), $staff->getName()->name); ?>",
+            content: "<?php echo sprintf(
+              __('The export has been sent to your email address at <b>%s</b>.'),
+              $thisstaff->getEmail()); ?>",
+        };
+        checkExportStatus(
+            'ajax.php/audit/export/status',
+            'ajax.php/audit/export/',
+            popopts
+        );
+    });
+});
+</script>
