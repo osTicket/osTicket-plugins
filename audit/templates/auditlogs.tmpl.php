@@ -142,34 +142,13 @@ $pageNav->setURL('audits.php', $args);
    </table>
 <?php
 echo '<div>';
-if ($total) //Show options..
+if ($total) { //Show options..
     echo '&nbsp;'.__('Page').':'.$pageNav->getPageLinks().'&nbsp;';
-echo sprintf('<a class="export-audit-csv no-pjax" href="#">%s</a>', __('Export'));
+}
+echo sprintf('<a href="#audit/export/%s/%s" id="%s" class="no-pjax nomodalexport">%s</a>',
+    $type,
+    $state,
+    'audit-export',
+    __('Export'));
 ?>
 </form>
-
-<script type="text/javascript">
-$(function() {
-    $('a.export-audit-csv').on('click', function(){
-        showExportPopup("<?php echo __('Audit Export'); ?>",
-          '<i class="icon-spinner icon-spin icon-large"></i>&nbsp;&nbsp;'
-          + "<?php echo __('Please wait while we generate the export.'); ?>"
-        );
-        $.ajax({
-            type: "POST",
-            url: 'ajax.php/audit/export/build/<?php echo $type; ?>/<?php echo $state; ?>'
-        });
-        var popopts = {
-            title: "<?php echo __('Audit Export'); ?>",
-            content: "<?php echo sprintf(
-              __('The export has been sent to your email address at <b>%s</b>.'),
-              $thisstaff->getEmail()); ?>",
-        };
-        checkExportStatus(
-            'ajax.php/audit/export/status',
-            'ajax.php/audit/export/',
-            popopts
-        );
-    });
-});
-</script>

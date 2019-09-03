@@ -2,7 +2,6 @@
 $args = array();
 parse_str($_SERVER['QUERY_STRING'], $args);
 unset($args['p'], $args['_pjax']);
-
 // Apply pagination
 $events = AuditEntry::getTableInfo($user);
 $total = count($events);
@@ -49,32 +48,10 @@ $pageNav->setURL('users.php', $args);
 <?php
     echo '<div>';
     echo '&nbsp;'.__('Page').':'.$pageNav->getPageLinks('audits').'&nbsp;';
-    echo sprintf('<a class="export-audit-csv no-pjax" href="#">%s</a>', __('Export'));
+    echo sprintf('<a href="ajax.php/audit/export/uid,%d" id="%s" class="no-pjax nomodalexport">%s</a>',
+        $user->getId(),
+        'audit-export',
+        __('Export'));
     echo '</div>';
 }
 ?>
-<script type="text/javascript">
-$(function() {
-    $('a.export-audit-csv').on('click', function(){
-        showExportPopup("<?php echo __('User Audit Export'); ?>",
-          '<i class="icon-spinner icon-spin icon-large"></i>&nbsp;&nbsp;'
-          + "<?php echo __('Please wait while we generate the export.'); ?>"
-        );
-        $.ajax({
-            type: "POST",
-            url: 'ajax.php/audit/export/build/uid,<?php echo $user->getId(); ?>'
-        });
-        var popopts = {
-            title: "<?php echo sprintf(__('%s Export'), $user->getName()); ?>",
-            content: "<?php echo sprintf(
-              __('The export has been sent to your email address at <b>%s</b>.'),
-              $thisstaff->getEmail()); ?>",
-        };
-        checkExportStatus(
-            'ajax.php/audit/export/status',
-            'ajax.php/audit/export/',
-            popopts
-        );
-    });
-});
-</script>

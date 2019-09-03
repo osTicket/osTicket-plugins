@@ -1,5 +1,4 @@
 <?php
-
 require_once 'class.audit.php';
 require_once(INCLUDE_DIR.'class.plugin.php');
 require_once('config.php');
@@ -71,86 +70,80 @@ class AuditPlugin extends Plugin {
             );
         });
 
+        // Ajax Audit Export
         Signal::connect('ajax.scp', function($dispatcher) {
-            $dispatcher->append(
-                url('^/audit/export/build/(?P<type>\w+)/(?P<state>\w+)|uid,(?P<uid>\d+)|sid,(?P<sid>\d+)|tid,(?P<tid>\d+)$',
-                function($type=NULL, $state=NULL, $uid=NULL, $sid=NULL, $tid=NULL) {
-                    global $thisstaff;
+             $dispatcher->append(
+                 url('^/audit/export/(?P<type>\w+)/(?P<state>\w+)|uid,(?P<uid>\d+)|sid,(?P<sid>\d+)|tid,(?P<tid>\d+)$',
+                 function($type=NULL, $state=NULL, $uid=NULL, $sid=NULL, $tid=NULL) {
+                     global $thisstaff;
 
-                    if (!$thisstaff)
-                        Http::response(403, 'Agent login is required');
+                     if (!$thisstaff)
+                         Http::response(403, 'Agent login is required');
 
-                    $show = AuditEntry::$show_view_audits;
-                    if ($type) {
-                        foreach (AuditEntry::getTypes() as $abbrev => $info) {
-                            if ($type == $abbrev)
-                               $name = AuditEntry::getObjectName($info[0]);
-                        }
-                        $filename = sprintf('%s-audits-%s.csv', $name, strftime('%Y%m%d'));
-                        Export::audits('audit', $type, $state, $filename, '', '', 'csv', $show);
-                    } elseif ($uid) {
-                        $userName = User::getNameById($uid);
-                        $filename = sprintf('%s-audits-%s.csv', $userName->name, strftime('%Y%m%d'));
-                        Export::audits('user', '', '', $filename, $tableInfo, $uid, 'csv', $show);
-                    } elseif ($sid) {
-                        $staff = Staff::lookup($sid);
-                        $filename = sprintf('%s-audits-%s.csv', $staff->getName(), strftime('%Y%m%d'));
-                        Export::audits('staff', '', '', $filename, $tableInfo, $sid, 'csv', $show);
-                    } elseif ($tid) {
-                        $ticket = Ticket::lookup($tid);
-                        $filename = sprintf('%s-audits-%s.csv', $ticket->getNumber(), strftime('%Y%m%d'));
-                        Export::audits('ticket', '', '', $filename, $tableInfo, $tid, 'csv', $show);
-                    }
-                })
-            );
-        });
+                     $show = AuditEntry::$show_view_audits;
+                     $data = array();
+                     if ($type) {
+                         $url = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_QUERY);
+                         $qarray = explode('&', $url);
 
-        Signal::connect('ajax.scp', function($dispatcher) {
-            $dispatcher->append(
-                url('^/audit/export/status$', function() {
-                    if(!($maxtime = ini_get('max_execution_time')))
-                        $maxtime = 30;
+                         foreach ($qarray as $key => $value) {
+                             list($k, $v) = explode('=', $value);
+                             $data[$k] = $v;
+                         }
+                         foreach (AuditEntry::getTypes() as $abbrev => $info) {
+                             if ($type == $abbrev)
+                                $name = AuditEntry::getObjectName($info[0]);
+                         }
+                         $filename = sprintf('%s-audits-%s.csv', $name, strftime('%Y%m%d'));
+                         $export = array('audit', $filename, '', '', 'csv', $show, $data);
+                     } elseif ($uid) {
+                         $userName = User::getNameById($uid);
+                         $filename = sprintf('%s-audits-%s.csv', $userName->name, strftime('%Y%m%d'));
+                         $export = array('user', $filename, $tableInfo, $uid, 'csv', $show, $data);
+                     } elseif ($sid) {
+                         $staff = Staff::lookup($sid);
+                         $filename = sprintf('%s-audits-%s.csv', $staff->getName(), strftime('%Y%m%d'));
+                         $export = array('staff', $filename, $tableInfo, $sid, 'csv', $show, $data);
+                     } elseif ($tid) {
+                         $ticket = Ticket::lookup($tid);
+                         $filename = sprintf('%s-audits-%s.csv', $ticket->getNumber(), strftime('%Y%m%d'));
+                         $export = array('ticket', $filename, $tableInfo, $tid, 'csv', $show, $data);
+                     }
 
-                    if ($_SESSION['export']['end']) {
-                        if (intval($_SESSION['export']['end'] - $_SESSION['export']['start']) >= $maxtime) {
-                            $response = array('status' => 'email');
-                        } else {
-                            $response = array(
-                                'status' => 'download',
-                                'filename' => $_SESSION['export']['filename'],
-                            );
-                        }
-                    } else
-                        $response = array('status' => 'writing');
-                    return JsonDataEncoder::encode($response);
-                })
-            );
-        });
+                     try {
+                         $interval = 5;
+                         // Create desired exporter
+                         $exporter = new CsvExporter();
+                         $extra = array('filename' => $filename,
+                                 'interval' => $interval);
+                         // Register the export in the session
+                         Exporter::register($exporter, $extra);
+                         // Flush response / return export id and check interval
+                         Http::flush(201, json_encode(['eid' =>
+                                     $exporter->getId(), 'interval' => $interval]));
+                         // Phew... now we're free to do the export
+                         session_write_close(); // Release session for other requests
+                         ignore_user_abort(1);  // Leave us alone bro!
+                         @set_time_limit(0);    // Useless when safe_mode is on
+                         // Export to the exporter
+                         $export[] = $exporter;
+                         call_user_func_array(array('Export', 'audits'), $export);
+                         $exporter->close();
+                         // Sleep 3 times the interval to allow time for file download
+                         sleep($interval*3);
+                         // Email the export if it exists
+                         $exporter->email($thisstaff);
+                         // Delete the file.
+                         @$exporter->delete();
+                         exit;
+                     } catch (Exception $ex) {
+                         $errors['err'] = __('Unable to prepare the export');
+                     }
 
-        Signal::connect('ajax.scp', function($dispatcher) {
-            $dispatcher->append(
-                url('^/audit/export/(?P<status>email|download)$', function($status) {
-                    global $thisstaff;
-
-                    if (!$status)
-                        Http::response(403, 'Export status is required');
-
-                    $filepath = $_SESSION['export']['tempath'];
-                    $filename = $_SESSION['export']['filename'];
-                    unset($_SESSION['export']);
-                    if ($status === 'download') {
-                        Http::download($filename, 'text/csv');
-                        $file = readfile($filepath);
-                        fclose($filepath);
-                        exit();
-                    } elseif ($status === 'email') {
-                        Mailer::sendExportEmail($filename, $filepath, $thisstaff, 'audit');
-                        fclose($filepath);
-                    } else
-                        Http::response(403, 'Unknown action');
-                })
-            );
-        });
+                     include 'templates/export.tmpl.php';
+                 })
+             );
+         });
 }
 
     function enable() {
