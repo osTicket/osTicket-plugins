@@ -14,43 +14,55 @@ class AuditPlugin extends Plugin {
         // Ticket audit
         Signal::connect('ticket.view.more', function($ticket, &$extras) {
             global $thisstaff;
-
             if (!$thisstaff || !$thisstaff->isAdmin())
                 return;
 
-            $extras[] = array(
-                'url' => 'ajax.php/audit/ticket/' . $ticket->getId() . '/view',
-                'icon' => 'icon-book',
-                'name' => __('View Audit Log')
-            );
+            echo sprintf('<li><a href="#%s"', 'ajax.php/audit/ticket/' . $ticket->getId() . '/view');
+            echo 'onclick="javascript: $.dialog($(this).attr(\'href\').substr(1), 201); return false;"';
+            echo sprintf('><i class="%s"></i>', 'icon-book' ?: 'icon-cogs');
+            echo __('View Audit Log');
+            echo '</a></li>';
         });
 
-        // User audit
-        Signal::connect('user.view.more', function($user, &$extras) {
+        // User audit tab
+        Signal::connect('usertab.audit', function($user, &$extras) {
             global $thisstaff;
-
             if (!$thisstaff || !$thisstaff->isAdmin())
                 return;
 
-            $extras[] = array(
-                'url' => sprintf('phar:///%s/plugins/audit.phar/templates/user-audit.tmpl.php', INCLUDE_DIR),
-                'icon' => 'icon-book',
-                'name' => __('View Audit Log'),
-                'tab' => __('audits')
-            );
+            $tabTitle = str_replace('-', ' ', __('audits'));
+            echo sprintf('<li> <a href="#%s">%s</a></li>', __('audits'), __(ucwords($tabTitle)));
         });
 
-        // Agent audit
+        // User audit body
+        Signal::connect('user.audit', function($user, &$extras) {
+            global $thisstaff;
+            if (!$thisstaff || !$thisstaff->isAdmin())
+                return;
+
+            echo '<div class="hidden tab_content" id="audits">';
+            include sprintf('phar:///%s/plugins/audit.phar/templates/user-audit.tmpl.php', INCLUDE_DIR);
+            echo '</div>';
+        });
+
+        // Agent audit tab
+        Signal::connect('agenttab.audit', function($staff, &$extras) {
+            global $thisstaff;
+            if (!$thisstaff || !$thisstaff->isAdmin())
+                return;
+
+            echo '<li> <a href="#audits">Audits</a></li>';
+        });
+
+        // Agent audit tab body
         Signal::connect('agent.audit', function($staff, &$extras) {
             global $thisstaff;
-
             if (!$thisstaff || !$thisstaff->isAdmin())
                 return;
 
-            $extras[] = array(
-                'url' => sprintf('phar:///%s/plugins/audit.phar/templates/agent-audit.tmpl.php', INCLUDE_DIR),
-                'tab' => __('audits')
-            );
+            echo '<div class="hidden tab_content" id="audits">';
+            include sprintf('phar:///%s/plugins/audit.phar/templates/agent-audit.tmpl.php', INCLUDE_DIR);
+            echo '</div>';
         });
 
         // Ajax View Ticket Audit

@@ -262,6 +262,7 @@ class AuditEntry extends VerySimpleModel {
         'manager_id' => 'Manager',
         'assignment_flag' => 'Ticket Assignment',
         'disable_auto_claim' => 'Claim on Response',
+        'disable_reopen_auto_assign' => 'Reopen Auto Assignment',
         'email_id' => 'Outgoing Email',
         'tpl_id' => 'Template Set',
         'ticket_auto_response' => 'New Ticket',
@@ -662,7 +663,7 @@ class AuditEntry extends VerySimpleModel {
     function getDataById($id, $type) {
         $row = self::objects()
             ->filter(array('object_type'=>$type, 'object_id'=>$id))
-            ->values_flat('object_type', 'data', 'object_id')
+            ->values_flat('object_type', 'object_id', 'data')
             ->first();
 
         return $row ? $row : 0;
@@ -696,10 +697,14 @@ class AuditEntry extends VerySimpleModel {
               if (get_class($object) == $info2[0])
                 $event->object_type = $key;
             }
-            $event->object_id = $object->ht['id'] ?: $object->getId();
+            if ($event->object_type)
+                $event->object_id = $object->ht['id'] ?: $object->getId();
+            else
+                return false;
         } else {
             $event->object_type = $object[0];
             $event->object_id = $object[1];
+            $event->data = $object[2];
         }
 
         $event->event_id = $event_id;
@@ -742,7 +747,14 @@ class AuditEntry extends VerySimpleModel {
                   $event_id = Event::getIdByName($info['type']);
                   break;
               default:
-                  if (is_null($thisstaff) && is_null($thisclient) && get_class($object) == 'Ticket') {
+                  $keys = array('updated', 'flags', 'mail_lastfetch', 'permissions', 'status');
+                  $classes = array('Email', 'Filter', 'Page', 'Role', 'Staff', 'Topic');
+                  if ($info['orm_audit'] &&
+                        (!in_array(get_class($object), $classes) || in_array($info['key'], $keys)))
+                    return false;
+
+                  if (is_null($thisstaff) && is_null($thisclient) &&
+                      get_class($object) == 'Ticket' && $info['type'] != 'assigned') {
                       $person = $object->getUser()->getName()->name;
                   } elseif (is_null($thisstaff) && is_null($thisclient))
                     $person = __('SYSTEM');
@@ -752,8 +764,8 @@ class AuditEntry extends VerySimpleModel {
                                 'person' => $person ? $person : ($thisstaff ? $thisstaff->getName()->name :
                                                        $thisclient->getName()->name));
                   foreach ($info as $key => $value) {
-                     if ($key != 'type')
-                        $data[$key] = $value;
+                      if ($key != 'type')
+                          $data[$key] = $value;
                   }
 
                   $info['data'] = json_encode($data);
@@ -795,7 +807,7 @@ class AuditEntry extends VerySimpleModel {
               `event_id` int(11) unsigned DEFAULT NULL,
               `staff_id` int(10) unsigned NOT NULL DEFAULT \'0\',
               `user_id` int(10) unsigned NOT NULL DEFAULT \'0\',
-              `data` varchar(1024) DEFAULT NULL,
+              `data` text,
               `ip` varchar(64) DEFAULT NULL,
               `timestamp` datetime NOT NULL,
               PRIMARY KEY (`id`),

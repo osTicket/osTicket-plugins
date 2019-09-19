@@ -25,18 +25,18 @@ $pageNav->setURL('users.php', $args);
 <table class="list" id="user-audit" style="width:100%">
     <thead>
     <tr>
-        <th>Description</th>
-        <th>Timestamp</th>
-        <th>IP Address</th>
+        <th><?php echo __('Description'); ?></th>
+        <th><?php echo __('Timestamp'); ?></th>
+        <th><?php echo __('IP Address'); ?></th>
     </tr>
     </thead>
     <tbody>
       <?php
       foreach ($events as $data) { ?>
         <tr data-user-id="<?php echo $user->getId(); ?>">
-            <td><?php echo $data['description']; ?></td>
-            <td><?php echo $data['timestamp']; ?></td>
-            <td><?php echo $data['ip']; ?></td>
+            <td><?php echo Format::htmlchars($data['description']); ?></td>
+            <td><?php echo Format::htmlchars($data['timestamp']); ?></td>
+            <td><?php echo Format::htmlchars($data['ip']); ?></td>
         </tr>
       <?php
       }
