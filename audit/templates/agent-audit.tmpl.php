@@ -3,11 +3,13 @@ $args = array();
 parse_str($_SERVER['QUERY_STRING'], $args);
 unset($args['p'], $args['_pjax']);
 
-$events = AuditEntry::getTableInfo($staff);
-$total = count($events);
-$qwhere = AuditEntry::getQwhere($staff);
-$pageNav=AuditEntry::getPageNav($qwhere);
-$pageNav->setURL('staff.php', $args);
+if ($staffId = $staff->getId()) {
+    $events = AuditEntry::getTableInfo($staff);
+    $total = count($events);
+    $qwhere = AuditEntry::getQwhere($staff);
+    $pageNav=AuditEntry::getPageNav($qwhere);
+    $pageNav->setURL('staff.php', $args);
+}
 
  ?>
 <h3><?php echo __('Agent Audit History'); ?></h3>
@@ -40,7 +42,7 @@ $pageNav->setURL('staff.php', $args);
 
         <?php
         foreach ($events as $data) { ?>
-          <tr data-staff-id="<?php echo $staff->getId(); ?>">
+          <tr data-staff-id="<?php echo $staffId; ?>">
               <td><?php echo $data['description']; ?></td>
               <td><?php echo $data['timestamp']; ?></td>
               <td><?php echo $data['ip']; ?></td>
@@ -56,9 +58,9 @@ $pageNav->setURL('staff.php', $args);
 <hr/>
 <?php
     echo '<div>';
-    echo '&nbsp;'.__('Page').':'.$pageNav->getPageLinks('audits').'&nbsp;';
+    if ($staffId) echo '&nbsp;'.__('Page').':'.$pageNav->getPageLinks('audits').'&nbsp;';
     echo sprintf('<a href="ajax.php/audit/export/sid,%d" id="%s" class="no-pjax nomodalexport">%s</a>',
-        $staff->getId(),
+        $staffId,
         'audit-export',
         __('Export'));
     echo '</div>';
