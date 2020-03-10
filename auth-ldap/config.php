@@ -87,6 +87,7 @@ class LdapConfig extends PluginConfig {
             'bind_pw' => new TextboxField(array(
                 'widget' => 'PasswordWidget',
                 'label' => $__('Password'),
+                'validator' => 'noop',
                 'hint' => $__("Password associated with the DN's account"),
                 'configuration' => array('size'=>40),
             )),
