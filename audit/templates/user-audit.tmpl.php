@@ -34,9 +34,9 @@ $pageNav->setURL('users.php', $args);
       <?php
       foreach ($events as $data) { ?>
         <tr data-user-id="<?php echo $user->getId(); ?>">
-            <td><?php echo Format::htmlchars($data['description']); ?></td>
-            <td><?php echo Format::htmlchars($data['timestamp']); ?></td>
-            <td><?php echo Format::htmlchars($data['ip']); ?></td>
+            <td><?php echo $data['description']; ?></td>
+            <td><?php echo $data['timestamp']; ?></td>
+            <td><?php echo $data['ip']; ?></td>
         </tr>
       <?php
       }
