@@ -640,7 +640,7 @@ class PluginBuilder extends Module {
     }
 
     function getComposer() {
-        list($code, $phar) = $this->_http_get('https://getcomposer.org/composer.phar');
+        list($code, $phar) = $this->_http_get('https://getcomposer.org/composer-stable.phar');
 
         if (!($fp = fopen(dirname(__file__).'/composer.phar', 'wb')))
             $this->fail('Cannot install composer: Unable to write "composer.phar"');
