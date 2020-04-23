@@ -136,7 +136,7 @@ class hCaptchaField extends FormField {
       hCaptchaField::$plugin_config = $this->getConfig();
       FormField::addFieldTypes(__('Verification'), function() {
         return array(
-          'hCaptcha' => array('Cloudflare hCaptcha', 'hCaptchaField')
+          'hCaptcha' => array('hCaptcha', 'hCaptchaField')
         );
       });
     }
