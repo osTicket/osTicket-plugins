@@ -41,7 +41,7 @@ class AuditPlugin extends Plugin {
                 return;
 
             echo '<div class="hidden tab_content" id="audits">';
-            include sprintf('phar:///%s/plugins/audit.phar/templates/user-audit.tmpl.php', INCLUDE_DIR);
+            include 'templates/user-audit.tmpl.php';
             echo '</div>';
         });
 
@@ -61,7 +61,7 @@ class AuditPlugin extends Plugin {
                 return;
 
             echo '<div class="hidden tab_content" id="audits">';
-            include sprintf('phar:///%s/plugins/audit.phar/templates/agent-audit.tmpl.php', INCLUDE_DIR);
+            include 'templates/agent-audit.tmpl.php';
             echo '</div>';
         });
 
