@@ -737,6 +737,7 @@ class AuditEntry extends VerySimpleModel {
     static function auditObjectEvent($object, $info=array()) {
       global $thisstaff, $thisclient;
 
+      $event_id = Event::getIdByName($info['type']);
       $types = self::getTypes();
       foreach ($types as $abbrev => $data) {
         if (is_object($object) && (get_class($object) == $data[0])) {
@@ -744,7 +745,6 @@ class AuditEntry extends VerySimpleModel {
               case 'X':
                   $data = array('person' => $thisstaff->getName()->name, 'key' => $info['key']);
                   $info['data'] = json_encode($data);
-                  $event_id = Event::getIdByName($info['type']);
                   break;
               default:
                   $keys = array('updated', 'flags', 'mail_lastfetch', 'permissions', 'status');
@@ -759,7 +759,7 @@ class AuditEntry extends VerySimpleModel {
                   } elseif (is_null($thisstaff) && is_null($thisclient))
                     $person = __('SYSTEM');
 
-                  $name = $object ? call_user_func(array($object, $data[1])) : '';
+                  $name = $object ? call_user_func(array($object, $data[1])) : __('NA');
                   $data = array('name' => is_object($name) ? $name->name : $name,
                                 'person' => $person ? $person : ($thisstaff ? $thisstaff->getName()->name :
                                                        $thisclient->getName()->name));
@@ -769,14 +769,23 @@ class AuditEntry extends VerySimpleModel {
                   }
 
                   $info['data'] = json_encode($data);
-                  $event_id = Event::getIdByName($info['type']);
                   break;
           }
         }
       }
       if (!is_object($object)) {
-        $info['data'] = json_encode($object);
-        $event_id = Event::getIdByName($info['type']);
+        if (!is_array($object)) {
+            if ($data = AuditEntry::getDataById($object, $info['abbrev']))
+                $name = json_decode($data[2], true);
+            else {
+                $name = __('NA');
+                $data = array($info['abbrev'], $object);
+            }
+            $info['data'] = json_encode($data);
+
+            return static::auditEvent($event_id, $data, $info);
+        } else
+            $info['data'] = json_encode($object);
       }
 
       return static::auditEvent($event_id, $object, $info);
