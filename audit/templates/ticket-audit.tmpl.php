@@ -34,7 +34,7 @@ $qstr = sprintf('%s&sort=timestamp', $qstr);
     <tr>
         <th>Description</th>
         <th><a class="audit-sort" <?php echo $timestamp_sort;
-            echo sprintf('href="#audit/ticket/%d/view?&%s&sort=timestamp"',$ticketId, $qstrReverse);
+            echo sprintf('href="#audit/ticket/%d/view?&%s"',$ticketId, $qstrReverse);
             ?>><?php echo __('Timestamp');?></a></th>
         <th>IP Address</th>
     </tr>
