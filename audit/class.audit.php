@@ -708,7 +708,7 @@ class AuditEntry extends VerySimpleModel {
         }
 
         $event->event_id = $event_id;
-        $event->ip = $_SERVER['REMOTE_ADDR'];
+        $event->ip = osTicket::get_client_ip();
 
         if ($thisstaff)
             $event->staff_id = $thisstaff->getId();
