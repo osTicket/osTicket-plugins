@@ -57,7 +57,7 @@ $links = str_replace('<a href', '<a class=audit-page href', $links);
 $links = str_replace('tickets.php?&amp;', $url, $links);
 $links = str_replace('?p', '?'.$qstr.'&p', $links);
     echo '<div>';
-    echo '&nbsp;'.__('Page').':'.$pageNav->getPageLinks('audits').'&nbsp;';
+    echo '&nbsp;'.__('Page').':'.$links.'&nbsp;';
     echo sprintf('<a href="ajax.php/audit/export/tid,%d" id="%s" class="no-pjax nomodalexport">%s</a>',
         $ticketId,
         'audit-export',
