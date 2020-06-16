@@ -456,6 +456,10 @@ class StaffLDAPAuthentication extends StaffAuthenticationBackend
         }
         return $hits;
     }
+
+    function supportsTwoFactorAuthentication() {
+        return false;
+    }
 }
 
 class ClientLDAPAuthentication extends UserAuthenticationBackend {
@@ -480,6 +484,10 @@ class ClientLDAPAuthentication extends UserAuthenticationBackend {
         if ($object instanceof ClientCreateRequest)
             $object->setBackend($this);
         return $object;
+    }
+
+    function supportsTwoFactorAuthentication() {
+        return false;
     }
 }
 

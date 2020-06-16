@@ -9,6 +9,10 @@ class HttpAuthentication extends StaffAuthenticationBackend {
         return false;
     }
 
+    function supportsTwoFactorAuthentication() {
+         return false;
+     }
+
     function signOn() {
         if (isset($_SERVER['REMOTE_USER']) && !empty($_SERVER['REMOTE_USER']))
             // User was authenticated by the HTTP server
@@ -46,6 +50,10 @@ class UserHttpAuthentication extends UserAuthenticationBackend {
     function supportsInteractiveAuthentication() {
         return false;
     }
+
+    function supportsTwoFactorAuthentication() {
+         return false;
+     }
 
     function signOn() {
         if (isset($_SERVER['REMOTE_USER']) && !empty($_SERVER['REMOTE_USER']))

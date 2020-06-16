@@ -144,6 +144,10 @@ class CasClientAuthBackend extends ExternalUserAuthenticationBackend {
         return false;
     }
 
+    function supportsTwoFactorAuthentication() {
+         return false;
+     }
+
     function signOn() {
         if (isset($_SESSION[':cas']['user'])) {
             $acct = ClientAccount::lookupByUsername($this->cas->getEmail());

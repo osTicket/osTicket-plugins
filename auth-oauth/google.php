@@ -97,6 +97,10 @@ class GoogleClientAuthBackend extends ExternalUserAuthenticationBackend {
         return false;
     }
 
+    function supportsTwoFactorAuthentication() {
+         return false;
+     }
+
     function signOn() {
         // TODO: Check session for auth token
         if (isset($_SESSION[':oauth']['email'])) {
@@ -148,5 +152,3 @@ class GoogleClientAuthBackend extends ExternalUserAuthenticationBackend {
         );
     }
 }
-
-
