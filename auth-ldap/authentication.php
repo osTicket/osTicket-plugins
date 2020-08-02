@@ -136,7 +136,6 @@ class LDAPAuthentication {
     }
 
     function getConnection($force_reconnect=false) {
-        file_put_contents('/var/www/html/output.txt',"\n".__FUNCTION__." | ",FILE_APPEND);
         static $connection = null;
 
         if ($connection && !$force_reconnect)
@@ -179,7 +178,6 @@ class LDAPAuthentication {
      * Binds to the directory under the search-user credentials configured
      */
     function _bind($connection) {
-        file_put_contents('/var/www/html/output.txt',"\n".__FUNCTION__." | ",FILE_APPEND);
         if ($dn = $this->getConfig()->get('bind_dn')) {
             $pw = Crypto::decrypt($this->getConfig()->get('bind_pw'),
                 SECRET_SALT, $this->getConfig()->getNamespace());
@@ -195,7 +193,6 @@ class LDAPAuthentication {
     }
 
     function authenticate($username, $password=null) {
-        file_put_contents('/var/www/html/output.txt',"\n".__FUNCTION__." | ",FILE_APPEND);
         // Thanks, http://stackoverflow.com/a/764651
         // Binding with an empty password implies an anonymous bind which
         // will likely be successful and incorrect
@@ -271,7 +268,6 @@ class LDAPAuthentication {
      * server's advertised DSE information
      */
     function getSchema($connection) {
-        file_put_contents('/var/www/html/output.txt',"\n".__FUNCTION__." | ",FILE_APPEND);
         $schema = $this->getConfig()->get('schema');
         if (!$schema || $schema == 'auto') {
             $dse = $connection->rootDse(array('supportedCapabilities'));
@@ -398,7 +394,7 @@ class LDAPAuthentication {
                     return $user;
                 }
                 */
-
+                //lower added by kallibr44
                 $c = $this->getConnection();
                 if ('msad' == $this->getSchema($c) && stripos($dn, ',dc=') === false) {
                     // The user login DN will be user@domain. We need an LDAP DN
@@ -476,7 +472,6 @@ class LDAPAuthentication {
                 }
                 break;
             case 'client':
-                file_put_contents('/var/www/html/output.txt',"Work as CLIENT"." | ",FILE_APPEND);
                 $c = $this->getConnection();
                 if ('msad' == $this->getSchema($c) && stripos($dn, ',dc=') === false) {
                     // The user login DN will be user@domain. We need an LDAP DN
@@ -494,10 +489,8 @@ class LDAPAuthentication {
                 // Lookup all the information on the user. Try to get the email
                 // addresss as well as the username when looking up the user
                 // locally.
-                file_put_contents('/var/www/html/output.txt',"\nLOOKUP DN: ".$dn,FILE_APPEND);
                 if (!($info = $this->lookup($dn, false)))
                     return;
-                file_put_contents('/var/www/html/output.txt',"\nLDAP RESULT: ".$info['username'],FILE_APPEND);
                 $acct = false;
                 foreach (array($username, $info['username'], $info['email']) as $name) {
                     if ($name && ($acct = ClientAccount::lookupByUsername($name)))
