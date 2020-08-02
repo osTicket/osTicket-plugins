@@ -96,6 +96,19 @@ class LdapConfig extends PluginConfig {
                 'hint' => $__('Used when searching for users'),
                 'configuration' => array('size'=>70, 'length'=>120),
             )),
+            //added fields
+            'staff_dn' => new TextboxField(array(
+               'label'=>$__('Staff DN'),
+               'hint'=> $__('Full LDAP Staff Context path'),
+                'configuration' => array('size'=>70, 'length'=>200)
+            )),
+            //added fields
+            'user_dn' => new TextboxField(array(
+                'label'=>$__('User DN'),
+                'hint'=> $__('Full LDAP User Context path'),
+                'default'=> "CN=Users",
+                'configuration' => array('size'=>70, 'length'=>200)
+            )),
             'schema' => new ChoiceField(array(
                 'label' => $__('LDAP Schema'),
                 'hint' => $__('Layout of the user data in the LDAP server'),
