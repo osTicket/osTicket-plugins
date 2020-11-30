@@ -798,16 +798,36 @@ class AuditEntry extends VerySimpleModel {
     }
 
     static function autoCreateTable() {
+        global $ost;
+
         $sql = 'SHOW TABLES LIKE \''.TABLE_PREFIX.'audit\'';
         if (db_num_rows(db_query($sql)))
             return true;
         else {
-            $sql = sprintf('INSERT INTO `%s` VALUES
-                ("", "login",""),
-                ("", "logout",""),
-                ("", "message",""),
-                ("", "note","")', TABLE_PREFIX.'event');
-            db_query($sql);
+            $event_type = array('login', 'logout', 'message', 'note');
+            foreach($event_type as $eType) {
+                $sql = sprintf("SELECT * FROM `%s` WHERE name = '%s'",
+                      TABLE_PREFIX.'event', $eType);
+
+               $res=db_query($sql);
+               $count = db_num_rows($res);
+
+               if($count > 0) {
+                  $message = "Event '$eType' already exists.";
+                  $ost->logWarning('Audit Log Installation: Add Events', $message, false);
+              } else {
+                  // Add event
+                  $sql = sprintf("INSERT INTO `%s` (`id`, `name`, `description`)
+                         VALUES
+                         ('','%s',NULL)",
+                          TABLE_PREFIX.'event', $eType);
+
+                   if(!($res=db_query($sql))) {
+                      $message = "Unable to add $eType event to `".TABLE_PREFIX.'event'."`.";
+                      $ost->logWarning('Audit Log Installation: Add Events', $message, false);
+                  }
+              }
+            }
 
             $sql = sprintf('CREATE TABLE `%s` (
               `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
