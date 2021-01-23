@@ -37,6 +37,7 @@ class LDAPAuthentication {
                 'phone' => 'telephoneNumber',
                 'mobile' => false,
                 'username' => 'sAMAccountName',
+                'avatar' => array('jpegPhoto', 'thumbnailPhoto'),
                 'dn' => '{username}@{domain}',
                 'search' => '(&(objectCategory=person)(objectClass=user)(|(sAMAccountName={q}*)(firstName={q}*)(lastName={q}*)(displayName={q}*)))',
                 'lookup' => '(&(objectCategory=person)(objectClass=user)({attr}={q}))',
@@ -58,6 +59,7 @@ class LDAPAuthentication {
                 'phone' => 'telephoneNumber',
                 'mobile' => 'mobileTelephoneNumber',
                 'username' => 'uid',
+                'avatar' => 'jpegPhoto',
                 'dn' => 'uid={username},{search_base}',
                 'search' => '(&(objectClass=inetOrgPerson)(|(uid={q}*)(displayName={q}*)(cn={q}*)))',
                 'lookup' => '(&(objectClass=inetOrgPerson)({attr}={q}))',
@@ -483,6 +485,91 @@ class ClientLDAPAuthentication extends UserAuthenticationBackend {
     }
 }
 
+if (defined('MAJOR_VERSION') && version_compare(MAJOR_VERSION, '1.10', '>=')) {
+    require_once INCLUDE_DIR . 'class.avatar.php';
+
+    class LdapAvatarSource
+    extends AvatarSource {
+        static $id = 'ldap';
+        static $name = 'LDAP and Active Directory';
+
+        static $config;
+
+        function getAvatar($user) {
+            return new LdapAvatar($user);
+        }
+
+        static function registerUrl($config) {
+            static::$config = $config;
+            Signal::connect('api', function($dispatcher) {
+                $dispatcher->append(
+                    url_get('^/ldap/avatar$', array('LdapAvatarSource', 'tryFetchAvatar'))
+                );
+            });
+        }
+
+        static function tryFetchAvatar() {
+            static::fetchAvatar();
+            // if fetchAvatar is successful, then it won't return
+            Http::redirect(ROOT_PATH.'images/mystery-oscar.png');
+        }
+
+        static function fetchAvatar() {
+            $ldap = new LDAPAuthentication(static::$config);
+
+            if (!($c = $ldap->getConnection()))
+                return null;
+
+            // This requires a search user to be defined
+            if (!$ldap->_bind($c))
+                return null;
+
+            $schema_type = $ldap->getSchema($c);
+            $schema = $ldap::$schemas[$schema_type]['user'];
+            list($email, $username) =
+                Net_LDAP2_Util::escape_filter_value(array(
+                    $_GET['email'], $_GET['username']));
+
+            $r = $c->search(
+                $ldap->getSearchBase(),
+                sprintf('(|(%s=%s)(%s=%s))', $schema['email'], $email,
+                    $schema['username'], $username),
+                array(
+                    'sizelimit' => 1,
+                    'attributes' => array_filter(flatten(array(
+                        $schema['avatar']
+                    ))),
+                )
+            );
+            if (PEAR::isError($r) || !$r->count())
+                return null;
+
+            if (!($avatar = $ldap->_getValue($r->current(), $schema['avatar'])))
+                return null;
+
+            // Ensure the value is cacheable
+            $etag = md5($avatar);
+            Http::cacheable($etag, false, 86400);
+            Http::response(200, $avatar, 'image/jpeg', false);
+        }
+    }
+
+    class LdapAvatar
+    extends Avatar {
+        function getUrl($size) {
+            $user = $this->user;
+            $acct = $user instanceof User
+                ? $this->user->getAccount()
+                : $user;
+            return ROOT_PATH . 'api/ldap/avatar?'
+                .Http::build_query(array(
+                    'email' => $this->user->getEmail(),
+                    'username' => $acct ? $acct->getUsername() : '',
+                ));
+        }
+    }
+}
+
 require_once(INCLUDE_DIR.'class.plugin.php');
 require_once('config.php');
 class LdapAuthPlugin extends Plugin {
@@ -494,5 +581,9 @@ class LdapAuthPlugin extends Plugin {
             StaffAuthenticationBackend::register(new StaffLDAPAuthentication($config));
         if ($config->get('auth-client'))
             UserAuthenticationBackend::register(new ClientLDAPAuthentication($config));
+        if (class_exists('LdapAvatarSource')) {
+            AvatarSource::register('LdapAvatarSource');
+            LdapAvatarSource::registerUrl($config);
+        }
     }
 }
