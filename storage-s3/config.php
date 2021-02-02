@@ -23,6 +23,10 @@ class S3StoragePluginConfig extends PluginConfig {
                 'label' => $__('S3 Bucket'),
                 'configuration' => array('size'=>40),
             )),
+            'folder' => new TextboxField(array(
+                'label' => $__('S3 Folder Path'),
+                'configuration' => array('size'=>40),
+            )),
             'aws-region' => new ChoiceField(array(
                 'label' => $__('AWS Region'),
                 'choices' => array(
