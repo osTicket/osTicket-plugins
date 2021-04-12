@@ -159,7 +159,7 @@ class LdapConfig extends PluginConfig {
                 $servers = array();
                 foreach (preg_split('/\s+/', $config['servers']) as $host)
                     if (preg_match('/([^:]+):(\d{1,4})/', $host, $matches))
-                        $servers[] = array('host' => $matches[1], 'port' => $matches[2]);
+                        $servers[] = array('host' => $matches[1], 'port' => (int) $matches[2]);
                     else
                         $servers[] = array('host' => $host);
             }
