@@ -662,7 +662,7 @@ class PluginBuilder extends Module {
         // Write composer.json file
         $composer = <<<EOF
 {
-    "name": "osTicket/core-plugins",
+    "name": "osticket/core-plugins",
     "repositories": [
         {
             "type": "pear",
