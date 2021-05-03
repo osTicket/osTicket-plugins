@@ -5,6 +5,7 @@ use Aws\S3\Model\MultipartUpload\UploadBuilder;
 use Aws\S3\S3Client;
 use Guzzle\Http\EntityBody;
 use Guzzle\Stream\PhpStreamRequestFactory;
+require_once INCLUDE_DIR . 'class.json.php';
 
 class S3StorageBackend extends FileStorageBackend {
     static $desc;
@@ -109,7 +110,7 @@ class S3StorageBackend extends FileStorageBackend {
 
             $info = $this->client->upload(
                 static::$config['bucket'],
-                self::getKey(),
+                self::getKey(true),
                 $filepath,
                 static::$config['acl'] ?: 'private',
                 array('params' => $params)
@@ -218,12 +219,23 @@ class S3StorageBackend extends FileStorageBackend {
         $this->body = new EntityBody(fopen('php://temp', 'r+'));
     }
 
-    function getKey() {
-        $key = static::$config['folder'] ?
-            sprintf('%s/%s', static::$config['folder'], $this->meta->getKey()) :
+    function getKey($create=false) {
+        $attrs = $create ? self::getAttrs() : $this->meta->getAttrs();
+        $attrs = JsonDataParser::parse($attrs);
+
+        $key = ($attrs && $attrs['folder']) ?
+            sprintf('%s/%s', $attrs['folder'], $this->meta->getKey()) :
             $this->meta->getKey();
 
         return $key;
+    }
+
+    function getAttrs() {
+        $bucket = static::$config['bucket'];
+        $folder = (static::$config['folder'] ? static::$config['folder'] : '');
+        $attr = JsonDataEncoder::encode(array('bucket' => $bucket, 'folder' => $folder));
+
+        return $attr;
     }
 }
 
