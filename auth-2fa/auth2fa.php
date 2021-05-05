@@ -24,11 +24,11 @@ class Auth2FAPlugin extends Plugin {
     }
 
     function disable() {
-        $default2fas = ConfigItem::getConfigsByNamespace(false, 'default_2fa', 'auth.agent');
+        $default2fas = ConfigItem::getConfigsByNamespace(false, 'default_2fa', static::$id);
         foreach($default2fas as $default2fa)
             $default2fa->delete();
 
-        $tokens = ConfigItem::getConfigsByNamespace(false, 'auth.agent');
+        $tokens = ConfigItem::getConfigsByNamespace(false, static::$id);
         foreach($tokens as $token)
             $token->delete();
 

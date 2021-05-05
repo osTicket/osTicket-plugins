@@ -126,7 +126,7 @@ class Auth2FABackend extends TwoFactorAuthenticationBackend {
             $staff = Staff::lookup($s->getId());
         }
 
-        if (!$token = ConfigItem::getConfigsByNamespace('staff.'.$staff->getId(), 'auth.agent')) {
+        if (!$token = ConfigItem::getConfigsByNamespace('staff.'.$staff->getId(), static::$id)) {
             $auth2FA = new \Sonata\GoogleAuthenticator\GoogleAuthenticator();
             $this->secretKey = $auth2FA->generateSecret();
             $this->store($this->secretKey);
