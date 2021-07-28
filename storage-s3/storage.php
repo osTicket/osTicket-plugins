@@ -5,6 +5,7 @@ use Aws\S3\Model\MultipartUpload\UploadBuilder;
 use Aws\S3\S3Client;
 use Guzzle\Http\EntityBody;
 use Guzzle\Stream\PhpStreamRequestFactory;
+require_once INCLUDE_DIR . 'class.json.php';
 
 class S3StorageBackend extends FileStorageBackend {
     static $desc;
@@ -54,7 +55,7 @@ class S3StorageBackend extends FileStorageBackend {
             return $chunk;
         }
         catch (Aws\S3\Exception\NoSuchKeyException $e) {
-            throw new IOException($this->meta->getKey()
+            throw new IOException(self::getKey()
                 .': Unable to locate file: '.(string)$e);
         }
     }
@@ -63,12 +64,12 @@ class S3StorageBackend extends FileStorageBackend {
         try {
             $res = $this->client->getObject(array(
                 'Bucket' => static::$config['bucket'],
-                'Key' => $this->meta->getKey(),
+                'Key'    => self::getKey(),
             ));
             fpassthru($res['Body']);
         }
         catch (Aws\S3\Exception\NoSuchKeyException $e) {
-            throw new IOException($this->meta->getKey()
+            throw new IOException(self::getKey()
                 .': Unable to locate file: '.(string)$e);
         }
     }
@@ -109,7 +110,7 @@ class S3StorageBackend extends FileStorageBackend {
 
             $info = $this->client->upload(
                 static::$config['bucket'],
-                $this->meta->getKey(),
+                self::getKey(true),
                 $filepath,
                 static::$config['acl'] ?: 'private',
                 array('params' => $params)
@@ -140,7 +141,7 @@ class S3StorageBackend extends FileStorageBackend {
         $now = time();
         Http::redirect($this->client->getObjectUrl(
             static::$config['bucket'],
-            $this->meta->getKey(),
+            self::getKey(),
             $now + 86400 - ($now % 86400), # Expire at midnight
             array(
                 'ResponseContentDisposition' => sprintf("%s; %s;",
@@ -154,7 +155,7 @@ class S3StorageBackend extends FileStorageBackend {
         try {
             $this->client->deleteObject(array(
                 'Bucket' => static::$config['bucket'],
-                'Key' => $this->meta->getKey()
+                'Key'    => self::getKey()
             ));
             return true;
         }
@@ -192,7 +193,7 @@ class S3StorageBackend extends FileStorageBackend {
     protected function openReadStream() {
         $params = array(
             'Bucket' => static::$config['bucket'],
-            'Key' => $this->meta->getKey(),
+            'Key'    => self::getKey(),
         );
 
         // Create the command and serialize the request
@@ -216,6 +217,25 @@ class S3StorageBackend extends FileStorageBackend {
      */
     protected function openWriteStream() {
         $this->body = new EntityBody(fopen('php://temp', 'r+'));
+    }
+
+    function getKey($create=false) {
+        $attrs = $create ? self::getAttrs() : $this->meta->getAttrs();
+        $attrs = JsonDataParser::parse($attrs);
+
+        $key = ($attrs && $attrs['folder']) ?
+            sprintf('%s/%s', $attrs['folder'], $this->meta->getKey()) :
+            $this->meta->getKey();
+
+        return $key;
+    }
+
+    function getAttrs() {
+        $bucket = static::$config['bucket'];
+        $folder = (static::$config['folder'] ? static::$config['folder'] : '');
+        $attr = JsonDataEncoder::encode(array('bucket' => $bucket, 'folder' => $folder));
+
+        return $attr;
     }
 }
 
