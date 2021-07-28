@@ -25,6 +25,8 @@ class LDAPAuthentication {
      * http://www.kouti.com/tables/userattributes.htm (AD)
      * https://fsuid.fsu.edu/admin/lib/WinADLDAPAttributes.html (AD)
      */
+
+
     static $schemas = array(
         'msad' => array(
             'user' => array(
@@ -76,6 +78,14 @@ class LDAPAuthentication {
         return $this->config;
     }
 
+    function login($backend,$client){
+        //fake login function, need to bypass autreg request
+        return true;
+    }
+    function supportsInteractiveAuthentication(){
+        //set false to skip user create page and pass to automatic registration
+        return false;
+    }
     function autodiscover($domain, $dns=array()) {
         require_once(PEAR_DIR.'Net/DNS2.php');
         // TODO: Lookup DNS server from hosts file if not set
@@ -108,7 +118,7 @@ class LDAPAuthentication {
 
     function getServers() {
         if (!($servers = $this->getConfig()->get('servers'))
-                || !($servers = preg_split('/\s+/', $servers))) {
+            || !($servers = preg_split('/\s+/', $servers))) {
             if ($domain = $this->getConfig()->get('domain')) {
                 $dns = preg_split('/,?\s+/', $this->getConfig()->get('dns'));
                 return $this->autodiscover($domain, array_filter($dns));
@@ -147,6 +157,7 @@ class LDAPAuthentication {
             $defaults['options'] += array(
                 'LDAP_OPT_PROTOCOL_VERSION' => 3,
                 'LDAP_OPT_REFERRALS' => 0,
+                'LDAP_OPT_DEBUG_LEVEL'=>9
             );
             // Active Directory servers almost always use self-signed certs
             putenv('LDAPTLS_REQCERT=never');
@@ -205,17 +216,17 @@ class LDAPAuthentication {
         $dn = preg_replace_callback(':\{([^}]+)\}:',
             function($match) use ($username, $domain, $config) {
                 switch ($match[1]) {
-                case 'username':
-                    return $username;
-                case 'domain':
-                    return $domain;
-                case 'search_base':
-                    if (!$config->get('search_base'))
-                        return 'dc=' . implode(',dc=',
-                            explode('.', $config->get('domain')));
+                    case 'username':
+                        return $username;
+                    case 'domain':
+                        return $domain;
+                    case 'search_base':
+                        if (!$config->get('search_base'))
+                            return 'dc=' . implode(',dc=',
+                                    explode('.', $config->get('domain')));
                     // Fall through to default
-                default:
-                    return $config->get($match[1]);
+                    default:
+                        return $config->get($match[1]);
                 }
             },
             $schema['dn']
@@ -263,8 +274,9 @@ class LDAPAuthentication {
             // Microsoft Active Directory
             // http://www.alvestrand.no/objectid/1.2.840.113556.1.4.800.html
             if (($caps = $dse->getValue('supportedCapabilities'))
-                    && in_array('1.2.840.113556.1.4.800', $caps)) {
+                && in_array('1.2.840.113556.1.4.800', $caps)) {
                 $this->getConfig()->set('schema', 'msad');
+
                 return 'msad';
             }
         }
@@ -276,9 +288,12 @@ class LDAPAuthentication {
     }
 
     function lookup($lookup_dn, $bind=true) {
+
         $c = $this->getConnection();
-        if ($bind && !$this->_bind($c))
+        if ($bind && !$this->_bind($c)) {
+
             return null;
+        }
 
         $schema = static::$schemas[$this->getSchema($c)];
         $schema = $schema['user'];
@@ -292,14 +307,15 @@ class LDAPAuthentication {
             )))
         );
         $r = $c->search($lookup_dn, '(objectClass=*)', $opts);
-        if (PEAR::isError($r) || !$r->count())
-            return null;
+        if (PEAR::isError($r) || !$r->count()){
+           return null;
+        }
 
         return $this->_getUserInfoArray($r->current(), $schema);
     }
 
     function search($query) {
-        $c = $this->getConnection();
+       $c = $this->getConnection();
         // TODO: Include bind information
         $users = array();
         if (!$this->_bind($c))
@@ -326,14 +342,14 @@ class LDAPAuthentication {
     }
 
     function getSearchBase() {
-        $base = $this->getConfig()->get('search_base');
+       $base = $this->getConfig()->get('search_base');
         if (!$base && ($domain=$this->getConfig()->get('domain')))
             $base = 'dc='.str_replace('.', ',dc=', $domain);
         return $base;
     }
 
     function _getValue($entry, $names) {
-        foreach (array_filter(splat($names)) as $n)
+       foreach (array_filter(splat($names)) as $n)
             // Support multi-value attributes
             foreach (splat($entry->getValue($n, 'all')) as $val)
                 // Return the first non-bool-false value of the entries
@@ -344,7 +360,7 @@ class LDAPAuthentication {
     function _getUserInfoArray($e, $schema) {
         // Detect first and last name if only full name is given
         if (!($first = $this->_getValue($e, $schema['first']))
-                || !($last = $this->_getValue($e, $schema['last']))) {
+            || !($last = $this->_getValue($e, $schema['last']))) {
             $name = new PersonsName($this->_getValue($e, $schema['full']));
             $first = $name->getFirst();
             $last = $name->getLast();
@@ -366,49 +382,127 @@ class LDAPAuthentication {
 
     function lookupAndSync($username, $dn) {
         switch ($this->type) {
-        case 'staff':
-            if (($user = StaffSession::lookup($username)) && $user->getId()) {
-                if (!$user instanceof StaffSession) {
-                    // osTicket <= v1.9.7 or so
-                    $user = new StaffSession($user->getId());
+            case 'staff':
+                /*
+                 * DEPRECATED
+                if (($user = StaffSession::lookup($username)) && $user->getId()) {
+                    if (!$user instanceof StaffSession) {
+
+                        // osTicket <= v1.9.7 or so
+                        $user = new StaffSession($user->getId());
+                    }
+                    return $user;
                 }
-                return $user;
-            }
-            break;
-        case 'client':
-            $c = $this->getConnection();
-            if ('msad' == $this->getSchema($c) && stripos($dn, ',dc=') === false) {
-                // The user login DN will be user@domain. We need an LDAP DN
-                // -- fetch the real DN which looks like `CN=blah,DC=`
-                // NOTE: Already bound, so no need to bind again
-                list($samid) = explode('@', $dn);
-                $r = $c->search(
-                    $this->getSearchBase(),
-                    sprintf('(|(userPrincipalName=%s)(samAccountName=%s))', $dn, $samid),
-                    $opts);
-                if (!PEAR::isError($r) && $r->count())
-                    $dn = $r->current()->dn();
-            }
+                */
+                //lower added by kallibr44
+                $c = $this->getConnection();
+                if ('msad' == $this->getSchema($c) && stripos($dn, ',dc=') === false) {
+                    // The user login DN will be user@domain. We need an LDAP DN
+                    // -- fetch the real DN which looks like `CN=blah,DC=`
+                    // NOTE: Already bound, so no need to bind again
+                    list($samid) = explode('@', $dn);
+                    $r = $c->search(
+                        $this->getSearchBase(),
+                        //to check what user currently in staff group, we should check it by memberOf attribute
+                        sprintf('(&(|(userPrincipalName=%s)(samAccountName=%s))(memberOf='.$this->getConfig()->get($this->type.'_dn').'))', $dn, $samid),
+                        $opts);
+                    if (!PEAR::isError($r) && $r->count()) {
+                        $dn = $r->current()->dn();
+                    }
+                    if (!($info = $this->lookup($dn, false))) {
+                        //if search return nothing - put empty function response (abstract function will throw access error)
+                        return;
+                    }
+                    //if all ok, modify response dict by adding copies of some fields (because response have different keys from which needed in next)
+                    $info += ["dept_id"=>1,"role_id"=>1,"firstname"=>$info["first"],"lastname"=>$info["last"]];
+                    $acct = false;
+                    $isUser = false;
+                    //check if user already have Client type account - if true, we'll skip account creation step
+                    $isUser = ClientAccount::lookupByUsername($username);
+                    foreach (array($username, $info['username'], $info['email']) as $name) {
+                        //try to find Staff type of account in osticket DB
+                        if ($name && ($acct = Staff::lookup($name)))
+                            break;
+                    }
+                    //if Client not found - we'll make it automatically (by built-in function)
+                    if (!$isUser){
+                        //make new request class instance
+                        $tmp = new ClientCreateRequest($this, $username, $info);
+                        //make autoreg, in top of abstract class LDAP auth we made some fake functions to pass errors
+                        $tmp->attemptAutoRegister();
+                        //take ClientSession from created user (need to add user into staff)
+                        $acct = ClientAccount::lookupByUsername($username);
 
-            // Lookup all the information on the user. Try to get the email
-            // addresss as well as the username when looking up the user
-            // locally.
-            if (!($info = $this->lookup($dn, false)))
-                return;
+                    }
 
-            $acct = false;
-            foreach (array($username, $info['username'], $info['email']) as $name) {
-                if ($name && ($acct = ClientAccount::lookupByUsername($name)))
-                    break;
-            }
-            if (!$acct)
-                return new ClientCreateRequest($this, $username, $info);
+                    if (!$acct) {
+                        //make request to rank up Client to Staff
+                        $staff = Staff::create();
+                        // $errors is global var, so we need just send this link (no need to create ourself var)
+                        if ($staff->update($info,$errors)) {
+                            $type = array('type' => 'created');
+                            Signal::send('object.created', $staff, $type);
+                            //trying to take new Staff user
+                            if (($user = StaffSession::lookup($username)) && $user->getId()) {
+                                if (!$user instanceof StaffSession) {
+                                    // osTicket <= v1.9.7 or so
+                                    $user = new StaffSession($user->getId());
+                                }
+                                return $user;
+                            }
+                        }
+                        else{
+                            //we got some problems on creating user, so we'll return empty response
+                            return ;
+                        }
 
-            if (($client = new ClientSession(new EndUser($acct->getUser())))
+                    }
+                    //if all found previously, just return Staff session
+                    if (($user = StaffSession::lookup($username)) && $user->getId()) {
+                        if (!$user instanceof StaffSession) {
+                            // osTicket <= v1.9.7 or so
+                            $user = new StaffSession($user->getId());
+                        }
+                        return $user;
+                    }
+                    else{
+                        //no staff user found
+                        return;
+                    }
+                }
+                break;
+            case 'client':
+                $c = $this->getConnection();
+                if ('msad' == $this->getSchema($c) && stripos($dn, ',dc=') === false) {
+                    // The user login DN will be user@domain. We need an LDAP DN
+                    // -- fetch the real DN which looks like `CN=blah,DC=`
+                    // NOTE: Already bound, so no need to bind again
+                    list($samid) = explode('@', $dn);
+                    $r = $c->search(
+                        $this->getSearchBase(),
+                        sprintf('(|(userPrincipalName=%s)(samAccountName=%s))', $dn, $samid),
+                        $opts);
+                    if (!PEAR::isError($r) && $r->count())
+                        $dn = $r->current()->dn();
+                }
+
+                // Lookup all the information on the user. Try to get the email
+                // addresss as well as the username when looking up the user
+                // locally.
+                if (!($info = $this->lookup($dn, false)))
+                    return;
+                $acct = false;
+                foreach (array($username, $info['username'], $info['email']) as $name) {
+                    if ($name && ($acct = ClientAccount::lookupByUsername($name)))
+                        break;
+                }
+                if (!$acct)
+                    return new ClientCreateRequest($this, $username, $info);
+                if (($client = new ClientSession(new EndUser($acct->getUser())))
                     && !$client->getId())
-                return;
+                    return;
 
-            return $client;
+                return $client;
         }
 
         // TODO: Auto-create users, etc.
@@ -416,7 +510,7 @@ class LDAPAuthentication {
 }
 
 class StaffLDAPAuthentication extends StaffAuthenticationBackend
-        implements AuthDirectorySearch {
+    implements AuthDirectorySearch {
 
     static $name = /* trans */ "Active Directory or LDAP";
     static $id = "ldap";
@@ -424,6 +518,7 @@ class StaffLDAPAuthentication extends StaffAuthenticationBackend
     function __construct($config) {
         $this->_ldap = new LDAPAuthentication($config);
         $this->config = $config;
+
     }
 
     function authenticate($username, $password=false, $errors=array()) {
@@ -461,6 +556,7 @@ class StaffLDAPAuthentication extends StaffAuthenticationBackend
 class ClientLDAPAuthentication extends UserAuthenticationBackend {
     static $name = /* trans */ "Active Directory or LDAP";
     static $id = "ldap.client";
+
 
     function __construct($config) {
         $this->_ldap = new LDAPAuthentication($config, 'client');
