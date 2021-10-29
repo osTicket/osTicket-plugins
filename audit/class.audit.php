@@ -710,20 +710,23 @@ class AuditEntry extends VerySimpleModel {
         $event->event_id = $event_id;
         $event->ip = osTicket::get_client_ip();
 
-        if ($thisstaff)
-            $event->staff_id = $thisstaff->getId();
-        elseif (is_object($object) && get_class($object) == 'Staff')
-          $event->staff_id = $object->getId();
-        elseif (is_object($object) && get_class($object) == 'User')
-          $event->user_id = $object->getId();
-        elseif ($info['uid'])
-          $event->user_id = $info['uid'];
-        elseif ($thisclient)
-            $event->user_id = $thisclient->getId();
-        else
-          $event->user_id = $object->getUserId();
+        try {
+            if ($thisstaff)
+                $event->staff_id = $thisstaff->getId();
+            elseif (is_object($object) && get_class($object) == 'Staff')
+              $event->staff_id = $object->getId();
+            elseif (is_object($object) && get_class($object) == 'User')
+              $event->user_id = $object->getId();
+            elseif ($info['uid'])
+              $event->user_id = $info['uid'];
+            elseif ($thisclient)
+                $event->user_id = $thisclient->getId();
 
-        return $event->save();
+            return $event->save();
+        } catch (Exception $e) {
+            //TODO: Return an error message
+        }
+
     }
 
     static function auditSpecialEvent($object, $info=array()) {
