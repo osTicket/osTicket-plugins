@@ -746,7 +746,7 @@ class AuditEntry extends VerySimpleModel {
         if (is_object($object) && (get_class($object) == $data[0])) {
           switch ($abbrev) {
               case 'X':
-                  $data = array('person' => $thisstaff->getName()->name, 'key' => $info['key']);
+                  $data = array('person' => $thisstaff ? $thisstaff->getName()->name : __('SYSTEM'), 'key' => $info['key']);
                   $info['data'] = json_encode($data);
                   break;
               default:
