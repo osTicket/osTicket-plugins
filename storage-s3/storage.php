@@ -35,6 +35,9 @@ class S3StorageBackend extends FileStorageBackend {
         );
         if ($config['aws-region'])
             $credentials['region'] = $config['aws-region'];
+			
+        if ($config['verion'])
+            $credentials['verion'] = $config['verion'];
 
         $this->client = S3Client::factory($credentials);
     }
