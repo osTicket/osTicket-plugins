@@ -37,6 +37,7 @@ class LDAPAuthentication {
                 'phone' => 'telephoneNumber',
                 'mobile' => false,
                 'username' => 'sAMAccountName',
+                'avatar' => array('jpegPhoto', 'thumbnailPhoto'),
                 'dn' => '{username}@{domain}',
                 'search' => '(&(objectCategory=person)(objectClass=user)(|(sAMAccountName={q}*)(firstName={q}*)(lastName={q}*)(displayName={q}*)))',
                 'lookup' => '(&(objectCategory=person)(objectClass=user)({attr}={q}))',
@@ -58,6 +59,7 @@ class LDAPAuthentication {
                 'phone' => 'telephoneNumber',
                 'mobile' => 'mobileTelephoneNumber',
                 'username' => 'uid',
+                'avatar' => 'jpegPhoto',
                 'dn' => 'uid={username},{search_base}',
                 'search' => '(&(objectClass=inetOrgPerson)(|(uid={q}*)(displayName={q}*)(cn={q}*)))',
                 'lookup' => '(&(objectClass=inetOrgPerson)({attr}={q}))',
@@ -76,9 +78,8 @@ class LDAPAuthentication {
         return $this->config;
     }
 
-    function autodiscover($domain, $dns=array()) {
+    static function lookupDnsWithServers($domain, $dns=array()) {
         require_once(PEAR_DIR.'Net/DNS2.php');
-        // TODO: Lookup DNS server from hosts file if not set
         $q = new Net_DNS2_Resolver();
         if ($dns)
             $q->setServers($dns);
@@ -98,12 +99,169 @@ class LDAPAuthentication {
                 'weight' => $srv->weight,
             );
         }
-        // Sort servers by priority ASC, then weight DESC
+        return $servers;
+    }
+
+    static function lookupDnsWindows($domain) {
+        $servers = array();
+        if (!($answers = dns_get_record('_ldap._tcp.'.$domain, DNS_SRV)))
+            return $servers;
+
+        foreach ($answers as $srv) {
+            $servers[] = array(
+                'host' => "{$srv['target']}:{$srv['port']}",
+                'priority' => $srv['pri'],
+                'weight' => $srv['weight'],
+            );
+        }
+        return $servers;
+    }
+
+    /**
+     * Discover Active Directory LDAP servers using DNS.
+     *
+     * Parameters:
+     * $domain - AD domain
+     * $dns - DNS server hints (optional)
+     * $closestOnly - Return at most one server which is definitely
+     *      available and represents the first to respond of all the servers
+     *      discovered in DNS.
+     *
+     * References:
+     * "DNS-Based Discovery" (Microsoft)
+     * https://msdn.microsoft.com/en-us/library/cc717360.aspx
+     */
+    static function autodiscover($domain, $dns=array(), $closestOnly=false,
+        $config=null
+    ) {
+        if (!$dns && stripos(PHP_OS, 'WIN') === 0) {
+            // Net_DNS2_Resolver won't work on windows servers without DNS
+            // specified
+            // TODO: Lookup DNS server from hosts file if not set 
+            $servers = self::lookupDnsWindows($domain);
+        }
+        else {
+            $servers = self::lookupDnsWithServers($domain, $dns);
+        }
+        // Sort by priority and weight
+        // priority ASC, then weight DESC
         usort($servers, function($a, $b) {
             return ($a['priority'] << 15) - $a['weight']
                 - ($b['priority'] << 15) + $b['weight'];
         });
+        // Locate closest domain controller (if requested)
+        if ($closestOnly) {
+            // If there are no servers from DNS, but there is one saved in the
+            // config, return that one
+            if (count($servers) === 0
+                && $config && ($T = $config->get('closest'))
+            ) {
+                return array($T);
+            }
+            if (is_int($idx = self::findClosestLdapServer($servers, $config))) {
+                return array($servers[$idx]);
+            }
+        }
         return $servers;
+    }
+
+    /**
+     * Discover the closest LDAP server based on apparent TCP connect
+     * timing. This method will attempt parallel, asynchronous connections
+     * to all received LDAP servers and return the array index of the
+     * first-respodning server.
+     *
+     * Returns:
+     * (int|false|null) - index into the received servers list for the
+     * first-responding server. NULL if no servers responded in a few
+     * seconds, and FALSE if the socket extension is not loaded for this
+     * PHP setup.
+     *
+     * References:
+     * "Finding a Domain Controller in the Closest Site" (Microsoft)
+     * https://technet.microsoft.com/en-us/library/cc978016.aspx
+     *
+     * "here's how you can implement timeouts with the socket functions"
+     * (PHP, rbarnes at fake dot com)
+     * http://us3.php.net/manual/en/function.socket-connect.php#84465
+     */
+    static function findClosestLdapServer($servers, $config=false,
+        $defl_port=389
+    ) {
+        if (!function_exists('socket_create'))
+            return false;
+
+        // If there's only one selection, then it must be the fastest
+        reset($servers);
+        if (count($servers) < 2)
+            return key($servers);
+
+        // Start with last-used closest server
+        if ($config && ($T = $config->get('closest'))) {
+            foreach ($servers as $i=>$S) {
+                if ($T == $S['host']) {
+                    // Move this server to the front of the list (but don't
+                    // change the indexing
+                    $servers = array($i=>$S) + $servers;
+                    break;
+                }
+            }
+        }
+
+        $sockets = array();
+        $closest = null;
+        $loops = 100; # ~50ms seconds max
+        while (!$closest && $loops--) {
+            // Look for a successful connection
+            foreach ($sockets as $i=>$X) {
+                list($sk, $host, $port) = $X;
+                if (@socket_connect($sk, $host, $port)) {
+                    // Connected!!!
+                    $closest = $i;
+                    break;
+                }
+                else {
+                    $error = socket_last_error();
+                    if (!in_array($error, array(SOCKET_EINPROGRESS, SOCKET_EALREADY))) {
+                        // Bad mojo
+                        socket_close($sk);
+                        unset($sockets[$i]);
+                    }
+                }
+            }
+            // Look for another server
+            list($i, $S) = each($servers);
+            if ($S) {
+                // Add another socket to the list
+                // Lookup IP address for host
+                list($host, $port) = explode(':', $S['host'], 2);
+                if (!@inet_pton($host)) {
+                    if ($host == ($ip = gethostbyname($host))) {
+                        continue;
+                    }
+                    $host = $ip;
+                }
+                // Start an async connect to this server
+                if (!($sk = socket_create(AF_INET, SOCK_STREAM, SOL_TCP)))
+                    continue;
+
+                socket_set_nonblock($sk);
+
+                $sockets[$i] = array($sk, $host, $port ?: $defl_port);
+            }
+            // Microsoft recommends waiting 0.1s; however, we're in the
+            // business of providing quick response times
+            usleep(500);
+        }
+        foreach ($sockets as $X) {
+            list($sk) = $X;
+            socket_close($sk);
+        }
+        // Save closest server for faster response next time
+        if ($config) {
+            $config->set('closest', $servers[$closest]['host']);
+        }
+        return $closest;
     }
 
     function getServers() {
@@ -111,7 +269,8 @@ class LDAPAuthentication {
                 || !($servers = preg_split('/\s+/', $servers))) {
             if ($domain = $this->getConfig()->get('domain')) {
                 $dns = preg_split('/,?\s+/', $this->getConfig()->get('dns'));
-                return $this->autodiscover($domain, array_filter($dns));
+                return self::autodiscover($domain, array_filter($dns),
+                    true, $this->getConfig());
             }
         }
         if ($servers) {
@@ -153,10 +312,14 @@ class LDAPAuthentication {
         }
 
         foreach ($this->getServers() as $s) {
+            @list($host, $port) = explode(':', $s['host'], 2);
+            if ($port) {
+                $s['port'] = $port;
+                $s['host'] = $host;
+            }
             $params = $defaults + $s;
             $c = new Net_LDAP2($params);
-            $r = $c->bind();
-            if (!PEAR::isError($r)) {
+            if ($this->_bind($c)) {
                 $connection = $c;
                 return $c;
             }
@@ -483,6 +646,91 @@ class ClientLDAPAuthentication extends UserAuthenticationBackend {
     }
 }
 
+if (defined('MAJOR_VERSION') && version_compare(MAJOR_VERSION, '1.10', '>=')) {
+    require_once INCLUDE_DIR . 'class.avatar.php';
+
+    class LdapAvatarSource
+    extends AvatarSource {
+        static $id = 'ldap';
+        static $name = 'LDAP and Active Directory';
+
+        static $config;
+
+        function getAvatar($user) {
+            return new LdapAvatar($user);
+        }
+
+        static function registerUrl($config) {
+            static::$config = $config;
+            Signal::connect('api', function($dispatcher) {
+                $dispatcher->append(
+                    url_get('^/ldap/avatar$', array('LdapAvatarSource', 'tryFetchAvatar'))
+                );
+            });
+        }
+
+        static function tryFetchAvatar() {
+            static::fetchAvatar();
+            // if fetchAvatar is successful, then it won't return
+            Http::redirect(ROOT_PATH.'images/mystery-oscar.png');
+        }
+
+        static function fetchAvatar() {
+            $ldap = new LDAPAuthentication(static::$config);
+
+            if (!($c = $ldap->getConnection()))
+                return null;
+
+            // This requires a search user to be defined
+            if (!$ldap->_bind($c))
+                return null;
+
+            $schema_type = $ldap->getSchema($c);
+            $schema = $ldap::$schemas[$schema_type]['user'];
+            list($email, $username) =
+                Net_LDAP2_Util::escape_filter_value(array(
+                    $_GET['email'], $_GET['username']));
+
+            $r = $c->search(
+                $ldap->getSearchBase(),
+                sprintf('(|(%s=%s)(%s=%s))', $schema['email'], $email,
+                    $schema['username'], $username),
+                array(
+                    'sizelimit' => 1,
+                    'attributes' => array_filter(flatten(array(
+                        $schema['avatar']
+                    ))),
+                )
+            );
+            if (PEAR::isError($r) || !$r->count())
+                return null;
+
+            if (!($avatar = $ldap->_getValue($r->current(), $schema['avatar'])))
+                return null;
+
+            // Ensure the value is cacheable
+            $etag = md5($avatar);
+            Http::cacheable($etag, false, 86400);
+            Http::response(200, $avatar, 'image/jpeg', false);
+        }
+    }
+
+    class LdapAvatar
+    extends Avatar {
+        function getUrl($size) {
+            $user = $this->user;
+            $acct = $user instanceof User
+                ? $this->user->getAccount()
+                : $user;
+            return ROOT_PATH . 'api/ldap/avatar?'
+                .Http::build_query(array(
+                    'email' => $this->user->getEmail(),
+                    'username' => $acct ? $acct->username : '',
+                ));
+        }
+    }
+}
+
 require_once(INCLUDE_DIR.'class.plugin.php');
 require_once('config.php');
 class LdapAuthPlugin extends Plugin {
@@ -494,5 +742,9 @@ class LdapAuthPlugin extends Plugin {
             StaffAuthenticationBackend::register(new StaffLDAPAuthentication($config));
         if ($config->get('auth-client'))
             UserAuthenticationBackend::register(new ClientLDAPAuthentication($config));
+        if (class_exists('LdapAvatarSource')) {
+            AvatarSource::register('LdapAvatarSource');
+            LdapAvatarSource::registerUrl($config);
+        }
     }
 }

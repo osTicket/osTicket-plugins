@@ -62,7 +62,10 @@ class LdapConfig extends PluginConfig {
             'servers' => new TextareaField(array(
                 'id' => 'servers',
                 'label' => $__('LDAP servers'),
-                'configuration' => array('html'=>false, 'rows'=>2, 'cols'=>40),
+                'configuration' => array('html'=>false, 'rows'=>2,
+                    'cols'=>40,
+                    'placeholder' => $__('Auto detect (recommended for Active Directory)'),
+                ),
                 'hint' => $__('Use "server" or "server:port". Place one server entry per line'),
             )),
             'tls' => new BooleanField(array(
@@ -142,13 +145,37 @@ class LdapConfig extends PluginConfig {
             return;
         }
 
+        // Discover LDAP servers for this domain
         if ($config['domain'] && !$config['servers']) {
             if (!($servers = LDAPAuthentication::autodiscover($config['domain'],
-                    preg_split('/,?\s+/', $config['dns']))))
+                array_filter(preg_split('/,?\s+/', $config['dns']))))
+            ) {
                 $this->getForm()->getField('servers')->addError(
                     $__("Unable to find LDAP servers for this domain. Try giving
                     an address of one of the DNS servers or manually specify
                     the LDAP servers for this domain below."));
+            }
+            // Attemt to discover the closest server
+            elseif (false !== ($idx =
+                LDAPAuthentication::findClosestLdapServer($servers))
+            ) {
+                if (class_exists('Messages')) { # added in v1.10
+                    Messages::info(sprintf(
+                        $__('%s was detected as the closest LDAP server. If this is not true, set the servers manually'),
+                        $servers[$idx]['host']));
+                }
+                $servers = array($servers[$idx]);
+            }
+            elseif ($idx === null) {
+                $this->getForm()->getField('servers')->addError(
+                sprintf($__(
+                    "No autodiscovered servers (%s) seem to be responding"
+                    ), implode(', ', array_map(
+                        function($a) { return $a['host']; },
+                        $servers))
+                ));
+            }
+            // else scanning might not be supported by PHP
         }
         else {
             if (!$config['servers'])
@@ -164,6 +191,7 @@ class LdapConfig extends PluginConfig {
                         $servers[] = array('host' => $host);
             }
         }
+
         $connection_error = false;
         foreach ($servers as $info) {
             // Assume MSAD
@@ -185,6 +213,12 @@ class LdapConfig extends PluginConfig {
                 'LDAP_OPT_TIMELIMIT' => 5,
                 'LDAP_OPT_NETWORK_TIMEOUT' => 5,
             );
+            // Break 'port' to a separate option
+            @list($host, $port) = explode(':', $info['host'], 2);
+            if ($port) {
+                $info['port'] = $port;
+                $info['host'] = $host;
+            }
             $c = new Net_LDAP2($info);
             $r = $c->bind();
             if (PEAR::isError($r)) {
