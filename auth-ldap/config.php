@@ -108,11 +108,13 @@ class LdapConfig extends PluginConfig {
             )),
             'search_filter' => new TextboxField(array(
                 'label' => $__('LDAP Filter for searching users'),
-                'hint' => $__('Used when searching for users. {q} will be replaced with the search term.')
+                'hint' => $__('Used when searching for users. {q} will be replaced with the search term.'),
+                'configuration' => array('size'=>70, 'length'=>160),
             )),
             'auth_filter' => new TextboxField(array(
                 'label' => $__('LDAP Filter for authentication'),
-                'hint' => $__('Used when authenticating. {q} will be replaced with the user id.')
+                'hint' => $__('Used when authenticating. {q} will be replaced with the user id.'),
+                'configuration' => array('size'=>70, 'length'=>160),
             )),
 
             'auth' => new SectionBreakField(array(
