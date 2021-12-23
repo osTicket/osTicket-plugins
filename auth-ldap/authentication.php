@@ -28,7 +28,6 @@ class LDAPAuthentication {
     static $schemas = array(
         'msad' => array(
             'user' => array(
-                'filter' => '(objectClass=user)',
                 'base' => 'CN=Users',
                 'first' => 'givenName',
                 'last' => 'sn',
@@ -38,8 +37,6 @@ class LDAPAuthentication {
                 'mobile' => false,
                 'username' => 'sAMAccountName',
                 'dn' => '{username}@{domain}',
-                'search' => '(&(objectCategory=person)(objectClass=user)(|(sAMAccountName={q}*)(firstName={q}*)(lastName={q}*)(displayName={q}*)))',
-                'lookup' => '(&(objectCategory=person)(objectClass=user)({attr}={q}))',
             ),
             'group' => array(
                 'ismember' => '(&(objectClass=user)(sAMAccountName={username})
@@ -50,7 +47,6 @@ class LDAPAuthentication {
         // A general approach for RFC-2307
         '2307' => array(
             'user' => array(
-                'filter' => '(objectClass=inetOrgPerson)',
                 'first' => 'gn',
                 'last' => 'sn',
                 'full' => array('displayName', 'gecos', 'cn'),
@@ -59,8 +55,6 @@ class LDAPAuthentication {
                 'mobile' => 'mobileTelephoneNumber',
                 'username' => 'uid',
                 'dn' => 'uid={username},{search_base}',
-                'search' => '(&(objectClass=inetOrgPerson)(|(uid={q}*)(displayName={q}*)(cn={q}*)))',
-                'lookup' => '(&(objectClass=inetOrgPerson)({attr}={q}))',
             ),
         ),
     );
@@ -228,6 +222,7 @@ class LDAPAuthentication {
         if (!$this->_bind($c))
             return null;
 
+        $auth_filter = $this->getConfig()->get('auth_filter');
         $r = $c->search(
             $this->getSearchBase(),
             str_replace(
@@ -235,7 +230,7 @@ class LDAPAuthentication {
                 // Assume email address if the $username contains an @ sign
                 array(strpos($username, '@') ? $schema['email'] : $schema['username'],
                     $username),
-                $schema['lookup']),
+                $auth_filter),
             array('sizelimit' => 1)
         );
         if (PEAR::isError($r) || !$r->count())
@@ -307,9 +302,10 @@ class LDAPAuthentication {
 
         $schema = static::$schemas[$this->getSchema($c)];
         $schema = $schema['user'];
+        $search_filter = $this->getConfig()->get('search_filter');
         $r = $c->search(
             $this->getSearchBase(),
-            str_replace('{q}', $query, $schema['search']),
+            str_replace('{q}', $query, $search_filter,
             array('attributes' => array_filter(flatten(array(
                 $schema['first'], $schema['last'], $schema['full'],
                 $schema['phone'], $schema['mobile'], $schema['email'],

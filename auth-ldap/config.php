@@ -106,6 +106,14 @@ class LdapConfig extends PluginConfig {
                     '2307' => 'Posix Account (rfc 2307)',
                 ),
             )),
+            'search_filter' => new TextboxField(array(
+                'label' => $__('LDAP Filter for searching users'),
+                'hint' => $__('Used when searching for users. {q} will be replaced with the search term.')
+            )),
+            'auth_filter' => new TextboxField(array(
+                'label' => $__('LDAP Filter for authentication'),
+                'hint' => $__('Used when authenticating. {q} will be replaced with the user id.')
+            )),
 
             'auth' => new SectionBreakField(array(
                 'label' => $__('Authentication Modes'),
