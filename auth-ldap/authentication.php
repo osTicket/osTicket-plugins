@@ -305,7 +305,7 @@ class LDAPAuthentication {
         $search_filter = $this->getConfig()->get('search_filter');
         $r = $c->search(
             $this->getSearchBase(),
-            str_replace('{q}', $query, $search_filter,
+            str_replace('{q}', $query, $search_filter),
             array('attributes' => array_filter(flatten(array(
                 $schema['first'], $schema['last'], $schema['full'],
                 $schema['phone'], $schema['mobile'], $schema['email'],
