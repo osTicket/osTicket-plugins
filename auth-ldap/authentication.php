@@ -28,6 +28,7 @@ class LDAPAuthentication {
     static $schemas = array(
         'msad' => array(
             'user' => array(
+                'filter' => '(objectClass=user)',
                 'base' => 'CN=Users',
                 'first' => 'givenName',
                 'last' => 'sn',
@@ -37,6 +38,8 @@ class LDAPAuthentication {
                 'mobile' => false,
                 'username' => 'sAMAccountName',
                 'dn' => '{username}@{domain}',
+                'search' => '(&(objectCategory=person)(objectClass=user)(|(sAMAccountName={q}*)(firstName={q}*)(lastName={q}*)(displayName={q}*)))',
+                'lookup' => '(&(objectCategory=person)(objectClass=user)({attr}={q}))',
             ),
             'group' => array(
                 'ismember' => '(&(objectClass=user)(sAMAccountName={username})
@@ -47,6 +50,7 @@ class LDAPAuthentication {
         // A general approach for RFC-2307
         '2307' => array(
             'user' => array(
+                'filter' => '(objectClass=inetOrgPerson)',
                 'first' => 'gn',
                 'last' => 'sn',
                 'full' => array('displayName', 'gecos', 'cn'),
@@ -55,6 +59,8 @@ class LDAPAuthentication {
                 'mobile' => 'mobileTelephoneNumber',
                 'username' => 'uid',
                 'dn' => 'uid={username},{search_base}',
+                'search' => '(&(objectClass=inetOrgPerson)(|(uid={q}*)(displayName={q}*)(cn={q}*)))',
+                'lookup' => '(&(objectClass=inetOrgPerson)({attr}={q}))',
             ),
         ),
     );
