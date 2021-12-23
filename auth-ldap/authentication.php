@@ -228,7 +228,12 @@ class LDAPAuthentication {
         if (!$this->_bind($c))
             return null;
 
-        $auth_filter = $this->getConfig()->get('auth_filter');
+        $auth_filter = $schema['lookup'];
+
+        if ($this->getConfig()->get('use_custom_filters')) {
+            $auth_filter = $this->getConfig()->get('auth_filter');
+        }
+
         $r = $c->search(
             $this->getSearchBase(),
             str_replace(
@@ -308,7 +313,12 @@ class LDAPAuthentication {
 
         $schema = static::$schemas[$this->getSchema($c)];
         $schema = $schema['user'];
-        $search_filter = $this->getConfig()->get('search_filter');
+
+        $search_filter = $schema['search'];
+
+        if ($this->getConfig()->get('use_custom_filters')) {
+            $search_filter = $this->getConfig()->get('search_filter');
+        }
         $r = $c->search(
             $this->getSearchBase(),
             str_replace('{q}', $query, $search_filter),
