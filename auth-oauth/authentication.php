@@ -21,6 +21,19 @@ class OauthAuthPlugin extends Plugin {
             UserAuthenticationBackend::register(
                 new GoogleClientAuthBackend($this->getConfig()));
         }
+
+        # ----- Generic OAuth2 ---------------------
+        $generic = $config->get('generic-enabled');
+        if (in_array($generic, array('all', 'staff'))) {
+            require_once('generic-oauth2.php');
+            StaffAuthenticationBackend::register(
+                new GenericOAuth2StaffAuthBackend($this->getConfig()));
+        }
+        if (in_array($generic, array('all', 'client'))) {
+            require_once('generic-oauth2.php');
+            UserAuthenticationBackend::register(
+                new GenericOAuth2AuthBackend($this->getConfig()));
+        }
     }
 }
 

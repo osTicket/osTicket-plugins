@@ -40,6 +40,38 @@ class OauthPluginConfig extends PluginConfig {
                 'configuration' => array('size'=>60, 'length'=>100),
             )),
             'g-enabled' => clone $modes,
+            'generic' => new SectionBreakField(array(
+                'label' => $__('Generic OAuth2'),
+            )),
+            'generic-servicename' => new TextboxField(array(
+                'label' => $__('Service name'),
+                'configuration' => array('size'=>60, 'length'=>200),
+            )),
+            'generic-client-id' => new TextboxField(array(
+                'label' => $__('Client ID'),
+                'configuration' => array('size'=>60, 'length'=>200),
+            )),
+            'generic-client-secret' => new TextboxField(array(
+                'label' => $__('Client Secret'),
+                'configuration' => array('size'=>60, 'length'=>200),
+            )),
+            'generic-authorize-url' => new TextboxField(array(
+                'label' => $__('Authorize URL'),
+                'configuration' => array('size'=>60, 'length'=>200),
+            )),
+            'generic-token-url' => new TextboxField(array(
+                'label' => $__('Token URL'),
+                'configuration' => array('size'=>60, 'length'=>200),
+            )),
+            'generic-userinfo-url' => new TextboxField(array(
+                'label' => $__('User JSON URL'),
+                'configuration' => array('size'=>60, 'length'=>200),
+            )),
+            'generic-scope' => new TextboxField(array(
+                'label' => $__('Scope'),
+                'configuration' => array('size'=>60, 'length'=>200),
+            )),
+            'generic-enabled' => clone $modes,
         );
     }
 }
