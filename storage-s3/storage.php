@@ -1,5 +1,6 @@
 <?php
 
+use Aws\S3\Exception\S3Exception;
 use Aws\S3\Exception\SignatureDoesNotMatchException;
 use Aws\S3\Model\MultipartUpload\UploadBuilder;
 use Aws\S3\S3Client;
@@ -33,8 +34,14 @@ class S3StorageBackend extends FileStorageBackend {
             'secret' => Crypto::decrypt(static::$config['secret-access-key'],
                 SECRET_SALT, static::getConfig()->getNamespace()),
         );
-        if ($config['aws-region'])
-            $credentials['region'] = $config['aws-region'];
+        if (static::$config['aws-region'])
+            $credentials['region'] = static::$config['aws-region'];
+
+        if (static::$config['endpoint'])
+            $credentials['endpoint'] = static::$config['endpoint'];
+
+        if (static::$config['capath'])
+            $credentials['ssl.certificate_authority'] = static::$config['capath'];
 
         $this->client = S3Client::factory($credentials);
     }
@@ -87,6 +94,9 @@ class S3StorageBackend extends FileStorageBackend {
         return $this->upload($this->body);
     }
 
+    /**
+     * @throws IOException
+     */
     function upload($filepath) {
         if ($filepath instanceof EntityBody) {
             $filepath->rewind();
@@ -107,6 +117,7 @@ class S3StorageBackend extends FileStorageBackend {
             if (isset($this->upload_hash))
                 $params['Content-MD5'] =
                     $this->upload_hash_final = hash_final($this->upload_hash);
+            echo $filepath;
 
             $info = $this->client->upload(
                 static::$config['bucket'],
@@ -120,11 +131,11 @@ class S3StorageBackend extends FileStorageBackend {
         catch (S3Exception $e) {
             throw new IOException('Unable to upload to S3: '.(string)$e);
         }
-        return false;
     }
 
     // Support MD5 hash via the returned ETag header;
-    function getNativeHashAlgos() {
+    function getNativeHashAlgos(): array
+    {
         return array('md5');
     }
 
