@@ -79,7 +79,7 @@ class FsStoragePluginConfig extends PluginConfig {
 
     // Provide compatibility function for versions of osTicket prior to
     // translation support (v1.9.4)
-    function translate() {
+    static function translate() {
         if (!method_exists('Plugin', 'translate')) {
             return array(
                 function($x) { return $x; },
@@ -104,7 +104,7 @@ class FsStoragePluginConfig extends PluginConfig {
         );
     }
 
-    function pre_save($config, &$errors) {
+    function pre_save(&$config, &$errors) {
         list($__, $_N) = self::translate();
         $path = $config['uploadpath'];
         if ($path[0] != '/' && $path[1] != ':')
