@@ -19,7 +19,7 @@ class Auth2FAPlugin extends Plugin {
         return parent::enable();
     }
 
-    function uninstall() {
+    function uninstall(&$errors) {
         $errors = array();
 
         self::disable();
