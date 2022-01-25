@@ -663,12 +663,6 @@ class PluginBuilder extends Module {
         $composer = <<<EOF
 {
     "name": "osticket/core-plugins",
-    "repositories": [
-        {
-            "type": "pear",
-            "url": "https://pear.php.net"
-        }
-    ],
     "require": %s,
     "config": {
         "vendor-dir": "lib"
