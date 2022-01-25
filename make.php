@@ -459,50 +459,63 @@ class PluginBuilder extends Module {
         // Move things into place
         foreach (glob(dirname(__file__).'/*/plugin.php') as $plugin) {
             $p = (include $plugin);
-            if (!isset($p['requires']) || !is_array($p['requires']))
+            if ((!isset($p['requires']) || !is_array($p['requires'])) && !isset($p['map']))
                 continue;
             foreach ($p['requires'] as $lib=>$info) {
+                // Map composer dependencies
                 if (!isset($info['map']) || !is_array($info['map']))
                     continue;
                 foreach ($info['map'] as $lib=>$local) {
                     $source = dirname(__file__).'/lib/'.$lib;
                     $dest = dirname($plugin).'/'.$local;
-                    if ($this->options['verbose']) {
-                        $left = str_replace(dirname(__file__).'/', '', $source);
-                        $right = str_replace(dirname(__file__).'/', '', $dest);
-                        $this->stdout->write("Hydrating :: $left => $right\n");
-                    }
-                    if (is_file($source)) {
-                        copy($left, $right);
-                        continue;
-                    }
-                    foreach (
-                        $iterator = new RecursiveIteratorIterator(
-                            new RecursiveDirectoryIterator($source, RecursiveDirectoryIterator::SKIP_DOTS),
-                                RecursiveIteratorIterator::SELF_FIRST) as $item
-                    ) {
-                        if ($item->isDir())
-                            continue;
-
-                        $target = $dest . DIRECTORY_SEPARATOR . $iterator->getSubPathName();
-                        $parent = dirname($target);
-                        if (!file_exists($parent))
-                            mkdir($parent, 0777, true);
-                        // Compress PHP files
-                        if ($options['compress'] && fnmatch('*.php', $item)) {
-                            $p = popen('php -w '.realpath($item), 'r');
-                            $T = fopen($target, 'w');
-                            while ($b = fread($p, 8192))
-                                fwrite($T, $b);
-                            fclose($p);
-                            fclose($T);
-                        }
-                        else {
-                            copy($item, $target);
-                        }
-                    }
+                    $this->mapDependencies($lib, $local, $source, $dest);
                 }
                 // TODO: Fetch language files for this plugin
+            }
+            // Map custom dependencies
+            if (!isset($p['map']) || !is_array($p['map']))
+                continue;
+            foreach ($p['map'] as $lib=>$local) {
+                $source = dirname(__file__).'/lib/'.$lib;
+                $dest = dirname($plugin).'/'.$local;
+                $this->mapDependencies($lib, $local, $source, $dest);
+            }
+        }
+    }
+
+    function mapDependencies($lib, $local, $source, $dest) {
+        if ($this->options['verbose']) {
+            $left = str_replace(dirname(__file__).'/', '', $source);
+            $right = str_replace(dirname(__file__).'/', '', $dest);
+            $this->stdout->write("Hydrating :: $left => $right\n");
+        }
+        if (is_file($source)) {
+            copy($left, $right);
+            return;
+        }
+        foreach (
+            $iterator = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($source, RecursiveDirectoryIterator::SKIP_DOTS),
+                    RecursiveIteratorIterator::SELF_FIRST) as $item
+        ) {
+            if ($item->isDir())
+                continue;
+
+            $target = $dest . DIRECTORY_SEPARATOR . $iterator->getSubPathName();
+            $parent = dirname($target);
+            if (!file_exists($parent))
+                mkdir($parent, 0777, true);
+            // Compress PHP files
+            if ($options['compress'] && fnmatch('*.php', $item)) {
+                $p = popen('php -w '.realpath($item), 'r');
+                $T = fopen($target, 'w');
+                while ($b = fread($p, 8192))
+                    fwrite($T, $b);
+                fclose($p);
+                fclose($T);
+            }
+            else {
+                copy($item, $target);
             }
         }
     }
