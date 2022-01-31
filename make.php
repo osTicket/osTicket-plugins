@@ -469,7 +469,7 @@ class PluginBuilder extends Module {
                     foreach ($info['map'] as $lib=>$local) {
                         $source = dirname(__file__).'/lib/'.$lib;
                         $dest = dirname($plugin).'/'.$local;
-                        $this->mapDependencies($lib, $local, $source, $dest);
+                        $this->mapDependencies($options, $lib, $local, $source, $dest);
                     }
                     // TODO: Fetch language files for this plugin
                 }
@@ -480,12 +480,12 @@ class PluginBuilder extends Module {
             foreach ($p['map'] as $lib=>$local) {
                 $source = dirname(__file__).'/lib/'.$lib;
                 $dest = dirname($plugin).'/'.$local;
-                $this->mapDependencies($lib, $local, $source, $dest);
+                $this->mapDependencies($options, $lib, $local, $source, $dest);
             }
         }
     }
 
-    function mapDependencies($lib, $local, $source, $dest) {
+    function mapDependencies($options, $lib, $local, $source, $dest) {
         if ($this->options['verbose']) {
             $left = str_replace(dirname(__file__).'/', '', $source);
             $right = str_replace(dirname(__file__).'/', '', $dest);
