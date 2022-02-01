@@ -6,6 +6,7 @@ class Auth2FABackend extends TwoFactorAuthenticationBackend {
     static $name = "Authenticator";
 
     static $desc = /* @trans */ 'Verification codes are located in the Authenticator app of your choice on your phone';
+    static $custom_issuer;
 
     var $secretKey;
 
@@ -142,12 +143,11 @@ class Auth2FABackend extends TwoFactorAuthenticationBackend {
     }
 
     function getQRCode($staff=false) {
-        global $cfg;
-
         $staffEmail = $staff->getEmail();
         $secretKey = self::getSecretKey($staff);
+        $title = preg_replace('/[^A-Za-z0-9]/', '', self::$custom_issuer ?: __('osTicket'));
 
-        return \Sonata\GoogleAuthenticator\GoogleQrUrl::generate($staffEmail, $secretKey, $cfg->getTitle());
+        return \Sonata\GoogleAuthenticator\GoogleQrUrl::generate($staffEmail, $secretKey, $title);
     }
 
     function validateQRCode($staff=false) {

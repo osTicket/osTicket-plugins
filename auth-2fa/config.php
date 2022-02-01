@@ -1,6 +1,7 @@
 <?php
 
 require_once INCLUDE_DIR . 'class.plugin.php';
+require_once INCLUDE_DIR.'class.forms.php';
 
 class Auth2FAConfig extends PluginConfig {
 
@@ -14,5 +15,23 @@ class Auth2FAConfig extends PluginConfig {
             );
         }
         return Plugin::translate('2fa-auth');
+    }
+
+    function getOptions() {
+        return array(
+            'custom_issuer' => new TextboxField(array(
+                'label' => __('Issuer'),
+                'required' => false,
+                'configuration' => array('size'=>40),
+                'hint' => __('Customize the Issuer shown in your Authenticator app after scanning a QR Code.'),
+            )),
+        );
+    }
+
+    function pre_save(&$config, &$errors) {
+        global $msg;
+        if (!$errors)
+            $msg = __('Configuration updated successfully');
+        return true;
     }
 }

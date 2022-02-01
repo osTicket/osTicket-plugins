@@ -8,6 +8,10 @@ class Auth2FAPlugin extends Plugin {
     var $config_class = "Auth2FAConfig";
 
     function bootstrap() {
+        $config = $this->getConfig();
+        if ($config->get('custom_issuer'))
+            Auth2FABackend::$custom_issuer = $config->get('custom_issuer');
+
         TwoFactorAuthenticationBackend::register('Auth2FABackend');
     }
 
