@@ -19,6 +19,10 @@ class S3StoragePluginConfig extends PluginConfig {
     function getOptions() {
         list($__, $_N) = self::translate();
         return array(
+            'endpoint' => new TextboxField(array(
+                'label' => $__('S3 Endpoint'),
+                'configuration' => array('size'=>40),
+            )),
             'bucket' => new TextboxField(array(
                 'label' => $__('S3 Bucket'),
                 'configuration' => array('size'=>40),
@@ -55,6 +59,10 @@ class S3StoragePluginConfig extends PluginConfig {
                 ),
                 'default' => '',
             )),
+            'capath' => new TextboxField(array(
+                'label' => $__('CA Path'),
+                'configuration' => array('size'=>40),
+            )),
 
             'access-info' => new SectionBreakField(array(
                 'label' => $__('Access Information'),
@@ -81,6 +89,12 @@ class S3StoragePluginConfig extends PluginConfig {
                 ?: Crypto::decrypt($this->get('secret-access-key'), SECRET_SALT,
                         $this->getNamespace()),
         );
+        if ($config['endpoint'])
+            $credentials['endpoint'] = $config['endpoint'];
+
+        if ($config['capath'])
+            $credentials['ssl.certificate_authority'] = $config['capath'];
+
         if ($config['aws-region'])
             $credentials['region'] = $config['aws-region'];
 
