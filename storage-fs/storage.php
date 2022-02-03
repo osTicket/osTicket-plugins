@@ -69,7 +69,7 @@ class FilesystemStorage extends FileStorageBackend {
         // Auto-create the subfolders
         $base .= '/'.$prefix;
         if (!is_dir($base))
-            mkdir($base, 751);
+            mkdir($base, 0751);
 
         return $base.'/'.$hash;
     }
