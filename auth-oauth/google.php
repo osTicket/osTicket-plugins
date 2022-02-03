@@ -32,7 +32,7 @@ class GoogleStaffAuthBackend extends ExternalStaffAuthenticationBackend {
     static $id = "google";
     static $name = "Google Plus";
 
-    static $sign_in_image_url = "https://developers.google.com/+/images/branding/sign-in-buttons/White-signin_Long_base_44dp.png";
+    static $sign_in_image_url = "https://developers.google.com/identity/images/btn_google_signin_light_normal_web.png";
     static $service_name = "Google+";
 
     var $config;
