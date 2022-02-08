@@ -432,7 +432,7 @@ class StaffLDAPAuthentication extends StaffAuthenticationBackend
 
     function getName() {
         $config = $this->config;
-        list($__, $_N) = $config::translate();
+        list($__, $_N) = $config->translate();
         return $__(static::$name);
     }
 
@@ -471,7 +471,7 @@ class ClientLDAPAuthentication extends UserAuthenticationBackend {
 
     function getName() {
         $config = $this->config;
-        list($__, $_N) = $config::translate();
+        list($__, $_N) = $config->translate();
         return $__(static::$name);
     }
 

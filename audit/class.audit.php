@@ -53,7 +53,7 @@ class AuditEntry extends VerySimpleModel {
         Signal::connect('person.logout', array('AuditEntry', 'auditSpecialEvent'));
     }
 
-    function getObjectName($class) {
+    static function getObjectName($class) {
       switch ($class) {
         case 'Dept':
           return __('Department');
@@ -386,7 +386,7 @@ class AuditEntry extends VerySimpleModel {
     }
 
     //allows you to specify which part of the $types array you want returned
-    function getTypeExtra($objectType, $infoType) {
+    static function getTypeExtra($objectType, $infoType) {
       foreach (self::getTypes() as $key => $info) {
         if ($objectType == $key) {
           switch ($infoType) {
@@ -405,7 +405,7 @@ class AuditEntry extends VerySimpleModel {
       return $extra;
     }
 
-    function getPageNav($qwhere) {
+    static function getPageNav($qwhere) {
       $qselect = 'SELECT audit.* ';
       $qfrom=' FROM '.AUDIT_TABLE.' audit ';
       $total=db_count("SELECT count(*) $qfrom $qwhere");
@@ -416,7 +416,7 @@ class AuditEntry extends VerySimpleModel {
       return $pageNav;
     }
 
-    function getQwhere($objectId, $hide_views=false, $type='') {
+    static function getQwhere($objectId, $hide_views=false, $type='') {
       $class = is_object($objectId) ? get_class($objectId) : $objectId;
       switch ($class) {
         case 'User':
@@ -462,7 +462,7 @@ class AuditEntry extends VerySimpleModel {
       return $qwhere;
     }
 
-    function getOrder($order) {
+    static function getOrder($order) {
         if($_REQUEST['order'] && $orderWays[strtoupper($_REQUEST['order'])]) {
             $order=$orderWays[strtoupper($_REQUEST['order'])];
         }
@@ -471,7 +471,7 @@ class AuditEntry extends VerySimpleModel {
         return $order;
     }
 
-    function getQuery($qs, $objectId, $pageNav, $export, $type='') {
+    static function getQuery($qs, $objectId, $pageNav, $export, $type='') {
       $qselect = 'SELECT audit.* ';
       $qfrom=' FROM '.AUDIT_TABLE.' audit ';
       $qwhere =self::getQwhere($objectId, false, $type);
@@ -500,7 +500,7 @@ class AuditEntry extends VerySimpleModel {
       return $query;
     }
 
-    function getTableInfo($objectId, $export=false, $type='') {
+    static function getTableInfo($objectId, $export=false, $type='') {
       $qs = array();
       if($_REQUEST['type']) {
           $qs += array('type' => $_REQUEST['type']);
@@ -540,7 +540,7 @@ class AuditEntry extends VerySimpleModel {
       return self::$configurations;
     }
 
-    function getDescription($event, $export=false, $userType='') {
+    static function getDescription($event, $export=false, $userType='') {
       $event = is_object($event) ? $event->ht : $event;
       $data = json_decode($event['data'], true);
       $name = '';
@@ -660,7 +660,7 @@ class AuditEntry extends VerySimpleModel {
       return $export ? strip_tags($message) : $message;
     }
 
-    function getDataById($id, $type) {
+    static function getDataById($id, $type) {
         $row = self::objects()
             ->filter(array('object_type'=>$type, 'object_id'=>$id))
             ->values_flat('object_type', 'object_id', 'data')
@@ -669,7 +669,7 @@ class AuditEntry extends VerySimpleModel {
         return $row ? $row : 0;
     }
 
-    function getObjectLink($event) {
+    static function getObjectLink($event) {
         $types = self::getTypes();
         $urlPrefix = self::getTypeExtra($event['object_type'], 'URL');
         $data = json_decode($event['data'], true);

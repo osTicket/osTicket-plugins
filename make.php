@@ -459,50 +459,65 @@ class PluginBuilder extends Module {
         // Move things into place
         foreach (glob(dirname(__file__).'/*/plugin.php') as $plugin) {
             $p = (include $plugin);
-            if (!isset($p['requires']) || !is_array($p['requires']))
+            if ((!isset($p['requires']) || !is_array($p['requires'])) && !isset($p['map']))
                 continue;
-            foreach ($p['requires'] as $lib=>$info) {
-                if (!isset($info['map']) || !is_array($info['map']))
-                    continue;
-                foreach ($info['map'] as $lib=>$local) {
-                    $source = dirname(__file__).'/lib/'.$lib;
-                    $dest = dirname($plugin).'/'.$local;
-                    if ($this->options['verbose']) {
-                        $left = str_replace(dirname(__file__).'/', '', $source);
-                        $right = str_replace(dirname(__file__).'/', '', $dest);
-                        $this->stdout->write("Hydrating :: $left => $right\n");
-                    }
-                    if (is_file($source)) {
-                        copy($left, $right);
+            if (isset($p['requires'])) {
+                foreach ($p['requires'] as $lib=>$info) {
+                    // Map composer dependencies
+                    if (!isset($info['map']) || !is_array($info['map']))
                         continue;
+                    foreach ($info['map'] as $lib=>$local) {
+                        $source = dirname(__file__).'/lib/'.$lib;
+                        $dest = dirname($plugin).'/'.$local;
+                        $this->mapDependencies($options, $lib, $local, $source, $dest);
                     }
-                    foreach (
-                        $iterator = new RecursiveIteratorIterator(
-                            new RecursiveDirectoryIterator($source, RecursiveDirectoryIterator::SKIP_DOTS),
-                                RecursiveIteratorIterator::SELF_FIRST) as $item
-                    ) {
-                        if ($item->isDir())
-                            continue;
-
-                        $target = $dest . DIRECTORY_SEPARATOR . $iterator->getSubPathName();
-                        $parent = dirname($target);
-                        if (!file_exists($parent))
-                            mkdir($parent, 0777, true);
-                        // Compress PHP files
-                        if ($options['compress'] && fnmatch('*.php', $item)) {
-                            $p = popen('php -w '.realpath($item), 'r');
-                            $T = fopen($target, 'w');
-                            while ($b = fread($p, 8192))
-                                fwrite($T, $b);
-                            fclose($p);
-                            fclose($T);
-                        }
-                        else {
-                            copy($item, $target);
-                        }
-                    }
+                    // TODO: Fetch language files for this plugin
                 }
-                // TODO: Fetch language files for this plugin
+            }
+            // Map custom dependencies
+            if (!isset($p['map']) || !is_array($p['map']))
+                continue;
+            foreach ($p['map'] as $lib=>$local) {
+                $source = dirname(__file__).'/lib/'.$lib;
+                $dest = dirname($plugin).'/'.$local;
+                $this->mapDependencies($options, $lib, $local, $source, $dest);
+            }
+        }
+    }
+
+    function mapDependencies($options, $lib, $local, $source, $dest) {
+        if ($this->options['verbose']) {
+            $left = str_replace(dirname(__file__).'/', '', $source);
+            $right = str_replace(dirname(__file__).'/', '', $dest);
+            $this->stdout->write("Hydrating :: $left => $right\n");
+        }
+        if (is_file($source)) {
+            copy($left, $right);
+            return;
+        }
+        foreach (
+            $iterator = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($source, RecursiveDirectoryIterator::SKIP_DOTS),
+                    RecursiveIteratorIterator::SELF_FIRST) as $item
+        ) {
+            if ($item->isDir())
+                continue;
+
+            $target = $dest . DIRECTORY_SEPARATOR . $iterator->getSubPathName();
+            $parent = dirname($target);
+            if (!file_exists($parent))
+                mkdir($parent, 0777, true);
+            // Compress PHP files
+            if ($options['compress'] && fnmatch('*.php', $item)) {
+                $p = popen('php -w '.realpath($item), 'r');
+                $T = fopen($target, 'w');
+                while ($b = fread($p, 8192))
+                    fwrite($T, $b);
+                fclose($p);
+                fclose($T);
+            }
+            else {
+                copy($item, $target);
             }
         }
     }
@@ -640,7 +655,7 @@ class PluginBuilder extends Module {
     }
 
     function getComposer() {
-        list($code, $phar) = $this->_http_get('https://getcomposer.org/composer-1.phar');
+        list($code, $phar) = $this->_http_get('https://getcomposer.org/composer-2.phar');
 
         if (!($fp = fopen(dirname(__file__).'/composer.phar', 'wb')))
             $this->fail('Cannot install composer: Unable to write "composer.phar"');
@@ -663,12 +678,6 @@ class PluginBuilder extends Module {
         $composer = <<<EOF
 {
     "name": "osticket/core-plugins",
-    "repositories": [
-        {
-            "type": "pear",
-            "url": "https://pear.php.net"
-        }
-    ],
     "require": %s,
     "config": {
         "vendor-dir": "lib"

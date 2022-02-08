@@ -13,7 +13,8 @@ stage
 *.phar
 
 # Ignore installed dependencies and composer if placed here
-lib/
+lib/*
+!/lib/pear-pear.php.net/
 composer.phar
 composer.lock
 composer.json

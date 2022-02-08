@@ -19,7 +19,7 @@ class Auth2FAPlugin extends Plugin {
         return parent::enable();
     }
 
-    function uninstall() {
+    function uninstall(&$errors) {
         $errors = array();
 
         self::disable();
@@ -28,11 +28,11 @@ class Auth2FAPlugin extends Plugin {
     }
 
     function disable() {
-        $default2fas = ConfigItem::getConfigsByNamespace(false, 'default_2fa', static::$id);
+        $default2fas = ConfigItem::getConfigsByNamespace(false, 'default_2fa', Auth2FABackend::$id);
         foreach($default2fas as $default2fa)
             $default2fa->delete();
 
-        $tokens = ConfigItem::getConfigsByNamespace(false, static::$id);
+        $tokens = ConfigItem::getConfigsByNamespace(false, Auth2FABackend::$id);
         foreach($tokens as $token)
             $token->delete();
 

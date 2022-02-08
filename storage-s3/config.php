@@ -31,14 +31,31 @@ class S3StoragePluginConfig extends PluginConfig {
                 'label' => $__('AWS Region'),
                 'choices' => array(
                     '' => 'US Standard',
-                    'us-east-1' => 'US East (Northern Virginia)',
-                    'us-west-2' => 'US West (Oregon) Region',
-                    'us-west-1' => 'US West (Northern California) Region',
-                    'eu-west-1' => 'EU (Ireland) Region',
-                    'ap-southeast-1' => 'Asia Pacific (Singapore) Region',
-                    'ap-southeast-2' => 'Asia Pacific (Sydney) Region',
-                    'ap-northeast-1' => 'Asia Pacific (Tokyo) Region',
-                    'sa-east-1' => 'South America (Sao Paulo) Region',
+                    'us-east-1' => 'US East (N. Virginia)',
+                    'us-east-2' => 'US East (Ohio)',
+                    'us-west-1' => 'US West (N. California)',
+                    'us-west-2' => 'US West (Oregon)',
+                    'af-south-1' => 'Africa (Cape Town)',
+                    'ap-east-1' => 'Asia Pacific (Hong Kong)',
+                    'ap-south-1' => 'Asia Pacific (Mumbai)',
+                    'ap-northeast-3' => 'Asia Pacific (Osaka)',
+                    'ap-northeast-2' => 'Asia Pacific (Seoul)',
+                    'ap-southeast-1' => 'Asia Pacific (Singapore)',
+                    'ap-southeast-2' => 'Asia Pacific (Sydney)',
+                    'ap-northeast-1' => 'Asia Pacific (Tokyo)',
+                    'ca-central-1' => 'Canada (Central)',
+                    'cn-north-1' => 'China (Beijing)',
+                    'cn-northwest-1' => 'China (Ningxia)',
+                    'eu-central-1' => 'Europe (Frankfurt)',
+                    'eu-west-1' => 'Europe (Ireland)',
+                    'eu-west-2' => 'Europe (London)',
+                    'eu-south-1' => 'Europe (Milan)',
+                    'eu-west-3' => 'Europe (Paris)',
+                    'eu-north-1' => 'Europe (Stockholm)',
+                    'sa-east-1' => 'South America (São Paulo)',
+                    'me-south-1' => 'Middle East (Bahrain)',
+                    'us-gov-east-1' => 'AWS GovCloud (US-East)',
+                    'us-gov-west-1' => 'AWS GovCloud (US-West)',
                 ),
                 'default' => '',
             )),
@@ -75,7 +92,7 @@ class S3StoragePluginConfig extends PluginConfig {
 
     function pre_save(&$config, &$errors) {
         list($__, $_N) = self::translate();
-        $credentials = array(
+        $credentials['credentials'] = array(
             'key' => $config['aws-key-id'],
             'secret' => $config['secret-access-key']
                 ?: Crypto::decrypt($this->get('secret-access-key'), SECRET_SALT,
@@ -84,11 +101,14 @@ class S3StoragePluginConfig extends PluginConfig {
         if ($config['aws-region'])
             $credentials['region'] = $config['aws-region'];
 
-        if (!$credentials['secret'])
+        if (!$credentials['credentials']['secret'])
             $this->getForm()->getField('secret-access-key')->addError(
                 $__('Secret access key is required'));
 
-        $s3 = Aws\S3\S3Client::factory($credentials);
+        $credentials['version'] = '2006-03-01';
+        $credentials['signature_version'] = 'v4';
+
+        $s3 = new Aws\S3\S3Client($credentials);
 
         try {
             $s3->headBucket(array('Bucket'=>$config['bucket']));
