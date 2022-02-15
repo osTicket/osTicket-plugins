@@ -76,7 +76,7 @@ class LDAPAuthentication {
         return $this->config;
     }
 
-    function autodiscover($domain, $dns=array()) {
+    static function autodiscover($domain, $dns=array()) {
         require_once(PEAR_DIR.'Net/DNS2.php');
         // TODO: Lookup DNS server from hosts file if not set
         $q = new Net_DNS2_Resolver();
@@ -111,7 +111,7 @@ class LDAPAuthentication {
                 || !($servers = preg_split('/\s+/', $servers))) {
             if ($domain = $this->getConfig()->get('domain')) {
                 $dns = preg_split('/,?\s+/', $this->getConfig()->get('dns'));
-                return $this->autodiscover($domain, array_filter($dns));
+                return self::autodiscover($domain, array_filter($dns));
             }
         }
         if ($servers) {
