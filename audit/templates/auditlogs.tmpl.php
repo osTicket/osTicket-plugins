@@ -3,18 +3,18 @@ if(!defined('OSTADMININC') || !$thisstaff || !$thisstaff->isAdmin()) die('Access
 
 $qs = array();
 if($_REQUEST['type'])
-    $qs += array('type' => $_REQUEST['type']);
+    $qs += array('type' => Format::htmlchars($_REQUEST['type']));
 $type='D';
 
 if ($_REQUEST['type'])
-  $type=$_REQUEST['type'];
+  $type=Format::htmlchars($_REQUEST['type']);
 
 if($_REQUEST['state'])
-    $qs += array('state' => $_REQUEST['state']);
+    $qs += array('state' => Format::htmlchars($_REQUEST['state']));
 $state=__('All');
 
 if ($_REQUEST['state'])
-  $state=$_REQUEST['state'];
+  $state=Format::htmlchars($_REQUEST['state']);
 
 //dates
 $startTime  =($_REQUEST['startDate'] && (strlen($_REQUEST['startDate'])>=8))?strtotime($_REQUEST['startDate']):0;
@@ -28,7 +28,7 @@ if( ($startTime && $startTime>time()) or ($startTime>$endTime && $endTime>0)){
     if($endTime)
         $qs += array('endDate' => $_REQUEST['endDate']);
 }
-$order = AuditEntry::getOrder($_REQUEST['order']);
+$order = AuditEntry::getOrder(Format::htmlchars($_REQUEST['order']));
 $qs += array('order' => (($order=='DESC') ? 'ASC' : 'DESC'));
 $qstr = '&amp;'. Http::build_query($qs);
 
