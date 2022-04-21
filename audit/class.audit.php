@@ -463,12 +463,17 @@ class AuditEntry extends VerySimpleModel {
     }
 
     static function getOrder($order) {
-        if($_REQUEST['order'] && $orderWays[strtoupper($_REQUEST['order'])]) {
-            $order=$orderWays[strtoupper($_REQUEST['order'])];
-        }
-        $order=$order?$order:'DESC';
+        $or = null;
+        $orderWays=array('DESC'=>'DESC','ASC'=>'ASC');
 
-        return $order;
+        if ($order && $orderWays[strtoupper($order)])
+            $or = $orderWays[strtoupper($order)];
+        elseif($_REQUEST['order'] && $orderWays[strtoupper($_REQUEST['order'])])
+            $or = $orderWays[strtoupper($_REQUEST['order'])];
+
+        $or = $or ? $or : 'DESC';
+
+        return $or;
     }
 
     static function getQuery($qs, $objectId, $pageNav, $export, $type='') {
@@ -478,7 +483,6 @@ class AuditEntry extends VerySimpleModel {
 
       $sortOptions=array('id'=>'audit.id', 'object_id'=>'audit.object_id', 'state'=>'audit.state','type'=>'audit.object_type','ip'=>'audit.ip'
                           ,'timestamp'=>'audit.timestamp');
-      $orderWays=array('DESC'=>'DESC','ASC'=>'ASC');
       $sort=($_REQUEST['sort'] && $sortOptions[strtolower($_REQUEST['sort'])])?strtolower($_REQUEST['sort']):'timestamp';
       //Sorting options...
       if($sort && $sortOptions[$sort]) {
