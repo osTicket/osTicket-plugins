@@ -15,7 +15,7 @@ class GoogleAuth {
         return Auth2::legs(3)
             ->set('id', $this->config->get('g-client-id'))
             ->set('secret', $this->config->get('g-client-secret'))
-            ->set('redirect', 'http://' . $_SERVER['HTTP_HOST']
+            ->set('redirect', 'https://' . $_SERVER['HTTP_HOST']
                 . ROOT_PATH . 'api/auth/ext')
             ->set('scope', 'profile email')
 
@@ -32,7 +32,7 @@ class GoogleStaffAuthBackend extends ExternalStaffAuthenticationBackend {
     static $id = "google";
     static $name = "Google Plus";
 
-    static $sign_in_image_url = "https://developers.google.com/+/images/branding/sign-in-buttons/White-signin_Long_base_44dp.png";
+    static $sign_in_image_url = "https://developers.google.com/identity/images/btn_google_signin_dark_normal_web.png";
     static $service_name = "Google+";
 
     var $config;
@@ -85,7 +85,7 @@ class GoogleClientAuthBackend extends ExternalUserAuthenticationBackend {
     static $id = "google.client";
     static $name = "Google Plus";
 
-    static $sign_in_image_url = "https://developers.google.com/+/images/branding/sign-in-buttons/Red-signin_Long_base_44dp.png";
+    static $sign_in_image_url = "https://developers.google.com/identity/images/btn_google_signin_dark_normal_web.png";
     static $service_name = "Google+";
 
     function __construct($config) {
