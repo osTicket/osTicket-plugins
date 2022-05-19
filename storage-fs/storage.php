@@ -120,8 +120,11 @@ class FsStoragePluginConfig extends PluginConfig {
             $field->addError($__('Unable to write to directory'));
         elseif (!@unlink("$path/$file"))
             $field->addError($__('Unable to remove files from directory'));
-        else
+        else {
             touch("$path/.keep");
+            if (!is_file("$path/.htaccess"))
+                file_put_contents("$path/.htaccess", array('Options -Indexes', PHP_EOL, 'Deny from all'));
+        }
         return true;
     }
 }
