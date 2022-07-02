@@ -2,6 +2,7 @@
 return array(
     'id' =>             'auth:oath2', # notrans
     'version' =>        '0.1',
+    'ost_version' =>    '1.17', # Require osTicket v1.17+
     'name' =>           /* trans */ 'Oauth2 Client',
     'author' =>         'Peter Rotich <peter@osticket.com>',
     'description' =>    /* trans */ 'Provides a configurable Oauth2 authentication and authorization backends.  backends.',
