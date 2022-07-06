@@ -419,6 +419,8 @@ abstract class OAuth2ProviderBackend extends OAuth2AuthorizationBackend {
     function getEmailAuthBackend($id)  {
         list($auth, $a, $i) = self::parseId($id);
         if (!strcasecmp($auth, $this->getId())
+                && ($plugin=$this->getPlugin())
+                && $plugin->isActive()
                 && ($instance=$this->getPluginInstance((int) $i))
                 && ($config=$instance->getConfig())
                 && ($account=EmailAccount::lookup((int) $a))
