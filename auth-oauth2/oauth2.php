@@ -387,8 +387,11 @@ abstract class OAuth2ProviderBackend extends OAuth2AuthorizationBackend {
     function getConfig($instance=null) {
         if  ($instance && !is_object($instance))
             $instance = $this->getPluginInstance($instance);
-        if (!isset($this->config) || $instance)
-            $this->config = new BasicOAuth2Config($instance);
+        if (!isset($this->config) || $instance) {
+            $this->config = new BasicOAuth2Config($instance ?
+                    $instance->getNamespace() : null);
+            $this->config->setInstance($instance);
+        }
 
         return $this->config;
     }
