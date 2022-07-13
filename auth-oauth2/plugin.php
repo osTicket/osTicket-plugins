@@ -14,6 +14,8 @@ return array(
             "map" => array(
                 "league/oauth2-client/src" => 'lib/League/OAuth2/Client',
                 'guzzlehttp/guzzle/src' => 'lib/GuzzleHttp',
+                'guzzlehttp/psr7/src'   => 'lib/GuzzleHttp/Psr7',
+                'guzzlehttp/promises/src' => 'lib/GuzzleHttp/Promise',
                 'psr/http-client/src' => 'lib/Psr/Http/Client',
                 'psr/http-factory/src' => 'lib/Psr/Http/Factory',
                 'psr/http-message/src' => 'lib/Psr/Http/Message',
