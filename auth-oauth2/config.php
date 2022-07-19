@@ -137,14 +137,17 @@ class OAuth2Config extends PluginConfig {
                     )
                 )
             ),
-            'clientSecret' => new TextboxField(
+            'clientSecret' => new PasswordField(
                 array(
+                    'widget' => 'PasswordWidget',
                     'label' => $__('Client Secret'),
                     'hint' => $__('IdP Client Secret'),
-                    'required' => true,
+                    'required' => !$this->getClientSecret(),
+                    'validator' => 'noop',
                     'configuration' => array(
                         'size' => 64,
-                        'length' => 255
+                        'length' => 255,
+                        'key' => $this->getNamespace(),
                     )
                 )
             ),
