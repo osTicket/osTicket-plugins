@@ -293,7 +293,7 @@ class OAuth2EmailAuthBackend implements OAuth2AuthBackend  {
                     'resource_owner_id' => $token->getResourceOwnerId(),
                     'resource_owner_email' => $attrs['email'],
                 ];
-                if (0 && !$this->signIn($attrs))
+                if (!$this->signIn($attrs))
                     $errors[$err] = $this->error_msg(self::ERR_EMAIL_MISMATCH, $attrs);
                 elseif (!$info['refresh_token'])
                     $errors[$err] = $this->error_msg(self::ERR_REFRESH_TOKEN);
