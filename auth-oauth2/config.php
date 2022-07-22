@@ -46,6 +46,11 @@ class OAuth2Config extends PluginConfig {
     }
 
     public function getClientSettings() {
+        // Determine scope separator
+        $scopeSeparator = ',';
+        if (stripos($this->getAuthorizationUrl(), 'google') !== false)
+            $scopeSeparator = ' ';
+
         return [
             'clientId'       => $this->getClientId(),
             'clientSecret'   => $this->getClientSecret(),
@@ -53,7 +58,9 @@ class OAuth2Config extends PluginConfig {
             'urlAuthorize'   => $this->getAuthorizationUrl(),
             'urlAccessToken' => $this->getAccessTokenUrl(),
             'urlResourceOwnerDetails' => $this->getResourceOwnerDetailstUrl(),
-            'scopes' => $this->getScopes()];
+            'scopes' => $this->getScopes(),
+            'scopeSeparator' => $scopeSeparator,
+        ];
     }
 
     function translate() {
@@ -212,7 +219,6 @@ class OAuth2Config extends PluginConfig {
                         'size' => 64,
                         'length' => 255
                     ),
-                    'default' => OAuth2Plugin::default_scopes(),
                 )
             ),
             'attr_mapping' => new SectionBreakField(array(

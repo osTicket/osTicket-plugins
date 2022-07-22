@@ -384,12 +384,12 @@ abstract class OAuth2ProviderBackend extends OAuth2AuthorizationBackend {
         return $this->plugin;
     }
 
-    function getConfig($instance=null) {
+    function getConfig($instance=null, $vars=[]) {
         if  ($instance && !is_object($instance))
             $instance = $this->getPluginInstance($instance);
         if (!isset($this->config) || $instance) {
             $this->config = new BasicOAuth2Config($instance ?
-                    $instance->getNamespace() : null);
+                    $instance->getNamespace() : null, $vars);
             $this->config->setInstance($instance);
         }
 
@@ -397,8 +397,8 @@ abstract class OAuth2ProviderBackend extends OAuth2AuthorizationBackend {
     }
 
     function getConfigForm($vars, $id=null) {
-        return $this->getConfig($id)->getForm($vars ?:
-                $this->getDefaults());
+        $vars = $vars ?: $this->getDefaults();
+        return $this->getConfig($id, $vars)->getForm($vars);
     }
 
     function getDefaults() {
@@ -551,7 +551,7 @@ class GoogleOauth2Provider extends GenericOauth2Provider {
 }
 
 class MicrosoftOauth2Provider extends GenericOauth2Provider {
-    static $id = 'oauth2:msmail';
+    static $id = 'oauth2:microsoft';
     static $name = 'Microsoft';
     static $icon = 'icon-windows';
     static $defaults = [
@@ -591,7 +591,6 @@ class GoogleEmailOauth2Provider extends GenericOauth2Provider {
         'responseType' => 'code',
         'access_type' => 'offline',
         'prompt' => 'consent',
-        'scope' => ['https://mail.google.com/'],
         ];
 }
 
@@ -601,8 +600,9 @@ class MicrosoftEmailOauth2Provider extends GenericOauth2Provider {
     static $defaults = [
         'urlAuthorize' => 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
         'urlAccessToken' => 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
-        'urlResourceOwnerDetails' => 'https://outlook.office.com/api/v1.0/me',
-        'scopes' => 'offline_access https://outlook.office.com/IMAP.AccessAsUser.All',
+        'urlResourceOwnerDetails' => 'https://outlook.office.com/api/v2.0/me',
+        // scopes for offline access & mail (IMAP, POP & SMTP)
+        'scopes' => 'offline_access, https://outlook.office.com/IMAP.AccessAsUser.All, https://outlook.office.com/POP.AccessAsUser.All, https://outlook.office.com/SMTP.Send',
         'attr_username' => 'mail',
         'attr_email' => 'mail',
         'attr_givenname' => 'givenname',
@@ -611,8 +611,6 @@ class MicrosoftEmailOauth2Provider extends GenericOauth2Provider {
     static $urlOptions = [
         'tenant' => 'common',
         'accessType' => 'offline_access',
-        'scope' => 'offline_access https://outlook.office.com/IMAP.AccessAsUser.All',
         ];
 }
-
 ?>
