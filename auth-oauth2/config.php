@@ -46,21 +46,23 @@ class OAuth2Config extends PluginConfig {
     }
 
     public function getClientSettings() {
-        // Determine scope separator
-        $scopeSeparator = ',';
-        if (stripos($this->getAuthorizationUrl(), 'google') !== false)
-            $scopeSeparator = ' ';
-
-        return [
+        $scopes =  $this->getScopes();
+        $settings = [
             'clientId'       => $this->getClientId(),
             'clientSecret'   => $this->getClientSecret(),
             'redirectUri'    => $this->getRedirectUri(),
             'urlAuthorize'   => $this->getAuthorizationUrl(),
             'urlAccessToken' => $this->getAccessTokenUrl(),
             'urlResourceOwnerDetails' => $this->getResourceOwnerDetailstUrl(),
-            'scopes' => $this->getScopes(),
-            'scopeSeparator' => $scopeSeparator,
+            'scopes' => $scopes,
         ];
+
+        // Use comma separator when we have more than one scopes - this is
+        // because scopes string is comma exploded.
+        if ($scopes && count($scopes) > 1)
+            $settings['scopeSeparator'] = ',';
+
+        return $settings;
     }
 
     function translate() {

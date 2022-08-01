@@ -601,8 +601,7 @@ class MicrosoftEmailOauth2Provider extends GenericOauth2Provider {
         'urlAuthorize' => 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
         'urlAccessToken' => 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
         'urlResourceOwnerDetails' => 'https://outlook.office.com/api/v2.0/me',
-        // scopes for offline access & mail (IMAP, POP & SMTP)
-        'scopes' => 'offline_access, https://outlook.office.com/IMAP.AccessAsUser.All, https://outlook.office.com/POP.AccessAsUser.All, https://outlook.office.com/SMTP.Send',
+        'scopes' => 'offline_access https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/POP.AccessAsUser.All https://outlook.office.com/SMTP.Send',
         'attr_username' => 'mail',
         'attr_email' => 'mail',
         'attr_givenname' => 'givenname',
