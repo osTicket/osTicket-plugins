@@ -215,8 +215,8 @@ class OAuth2Config extends PluginConfig {
             'scopes' => new TextboxField(
                 array(
                     'label' => $__('Scopes'),
-                    'hint' => $__('Comma or Space separated scopes depending
-                        on IdP requirements'),
+                    'hint' => $__('Comma or Space separated scopes depending on IdP requirements'),
+                    'required' => true,
                     'configuration' => array(
                         'size' => 64,
                         'length' => 255
@@ -255,12 +255,21 @@ class OAuth2Config extends PluginConfig {
     }
 }
 
-class BasicOAuth2Config extends OAuth2Config {
+class OAuth2EmailConfig extends OAuth2Config {
     // Only get the basic field options
     function getOptions() {
-        return array_intersect_key(parent::getOptions(),
-                array_flip(['clientId', 'clientSecret', 'urlAuthorize',
-                    'urlAccessToken', 'urlResourceOwnerDetails',
-                    'redirectUri', 'scopes']));
+        list($__, $_N) = self::translate();
+        $basic =  array_flip(['clientId', 'clientSecret', 'urlAuthorize',
+                'urlAccessToken', 'urlResourceOwnerDetails', 'attr_email',
+                'scopes', 'redirectUri']);
+        $fields = array_merge($basic, array_intersect_key(
+                    parent::getOptions(), $basic));
+        $fields['attr_email'] = new TextboxField(array(
+                'label' => $__('Email Address Attribute'),
+                'hint' => $__('Please consult your provider docs for the correct attribute to use'),
+                'required' => true,
+            ));
+
+        return $fields;
     }
 }
