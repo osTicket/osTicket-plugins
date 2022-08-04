@@ -261,8 +261,9 @@ class OAuth2EmailAuthBackend implements OAuth2AuthBackend  {
     public  $account;
 
     const ERR_UNKNOWN = 0;
-    const ERR_EMAIL_MISMATCH = 1;
-    const ERR_REFRESH_TOKEN = 2;
+    const ERR_EMAIL_ATTR = 1;
+    const ERR_EMAIL_MISMATCH = 2;
+    const ERR_REFRESH_TOKEN = 3;
 
     function getEmailId() {
         return $this->account->getEmailId();
@@ -293,7 +294,9 @@ class OAuth2EmailAuthBackend implements OAuth2AuthBackend  {
                     'resource_owner_id' => $token->getResourceOwnerId(),
                     'resource_owner_email' => $attrs['email'],
                 ];
-                if (!$this->signIn($attrs))
+                if (!isset($attrs['email']))
+                    $errors[$err] = $this->error_msg(self::ERR_EMAIL_ATTR, $attrs);
+                elseif (!$this->signIn($attrs))
                     $errors[$err] = $this->error_msg(self::ERR_EMAIL_MISMATCH, $attrs);
                 elseif (!$info['refresh_token'])
                     $errors[$err] = $this->error_msg(self::ERR_REFRESH_TOKEN);
@@ -339,6 +342,9 @@ class OAuth2EmailAuthBackend implements OAuth2AuthBackend  {
 
     private function error_msg($errorno, $attrs=[]) {
         switch ($errorno) {
+            case self::ERR_EMAIL_ATTR:
+                return __('Invalid Email Atrribute');
+                break;
             case self::ERR_EMAIL_MISMATCH:
                 return sprintf(__('Email Mismatch: Expecting Authorization for %s not %s'),
                         $this->getEmailAddress(),
