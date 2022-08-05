@@ -1,7 +1,7 @@
 <?php
 return array(
     'id' =>             'auth:oath2', # notrans
-    'version' =>        '0.2',
+    'version' =>        '0.3',
     'ost_version' =>    '1.17', # Require osTicket v1.17+
     'name' =>           /* trans */ 'Oauth2 Client',
     'author' =>         'Peter Rotich <peter@osticket.com>',
