@@ -259,9 +259,9 @@ class OAuth2EmailConfig extends OAuth2Config {
     // Only get the basic field options
     function getOptions() {
         list($__, $_N) = self::translate();
-        $basic =  array_flip(['clientId', 'clientSecret', 'urlAuthorize',
-                'urlAccessToken', 'urlResourceOwnerDetails', 'attr_email',
-                'scopes', 'redirectUri']);
+        $basic =  array_flip(['clientId', 'clientSecret', 'scopes',
+                'urlAuthorize', 'urlAccessToken', 'urlResourceOwnerDetails',
+                'attr_email', 'redirectUri']);
         $fields = array_merge($basic, array_intersect_key(
                     parent::getOptions(), $basic));
         $fields['attr_email'] = new TextboxField(array(
