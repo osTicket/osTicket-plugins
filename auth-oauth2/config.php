@@ -142,7 +142,7 @@ class OAuth2Config extends PluginConfig {
                     'required' => true,
                     'configuration' => array(
                         'size' => 64,
-                        'length' => 255
+                        'length' => 0
                     )
                 )
             ),
@@ -155,7 +155,7 @@ class OAuth2Config extends PluginConfig {
                     'validator' => 'noop',
                     'configuration' => array(
                         'size' => 64,
-                        'length' => 255,
+                        'length' => 0,
                         'key' => $this->getNamespace(),
                     )
                 )
@@ -167,7 +167,7 @@ class OAuth2Config extends PluginConfig {
                     'required' => true,
                     'configuration' => array(
                         'size' => 64,
-                        'length' => 255
+                        'length' => 0
                     ),
                     'validators' => function($f, $v) {
                         if (!preg_match('[\.*(/api/auth/oauth2)$]isu', $v))
@@ -183,7 +183,7 @@ class OAuth2Config extends PluginConfig {
                     'required' => true,
                     'configuration' => array(
                         'size' => 64,
-                        'length' => 255
+                        'length' => 0
                     ),
                     'default' => '',
                 )
@@ -195,7 +195,7 @@ class OAuth2Config extends PluginConfig {
                     'required' => true,
                     'configuration' => array(
                         'size' => 64,
-                        'length' => 255
+                        'length' => 0
                     ),
                     'default' => '',
                 )
@@ -207,7 +207,7 @@ class OAuth2Config extends PluginConfig {
                     'required' => true,
                     'configuration' => array(
                         'size' => 64,
-                        'length' => 255
+                        'length' => 0
                     ),
                     'default' => '',
                 )
@@ -219,7 +219,7 @@ class OAuth2Config extends PluginConfig {
                     'required' => true,
                     'configuration' => array(
                         'size' => 64,
-                        'length' => 255
+                        'length' => 0
                     ),
                 )
             ),
@@ -232,24 +232,40 @@ class OAuth2Config extends PluginConfig {
                 'hint'  => $__('Unique User Identifier - Username or Email address'),
                 'required' => true,
                 'default' => 'email',
+                'configuration' => array(
+                    'size' => 64,
+                    'length' => 0
+                ),
 
             )),
             'attr_givenname' => new TextboxField(array(
                 'label' => $__('Given Name'),
                 'hint'  => $__('First name'),
                 'default' => 'givenname',
+                'configuration' => array(
+                    'size' => 64,
+                    'length' => 0
+                ),
 
             )),
             'attr_surname' => new TextboxField(array(
                 'label' => $__('Surname'),
                 'hint'  => $__('Last name'),
                 'default' => 'surname',
+                'configuration' => array(
+                    'size' => 64,
+                    'length' => 0
+                ),
 
             )),
             'attr_email' => new TextboxField(array(
                 'label' => $__('Email Address'),
                 'hint' => $__('Email address required to auto-create User accounts. Agents must already exist.'),
                 'default' => 'email',
+                'configuration' => array(
+                    'size' => 64,
+                    'length' => 0
+                ),
             )),
         );
     }
