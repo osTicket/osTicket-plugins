@@ -68,7 +68,7 @@ extends PluginConfig {
                 'required' => false,
                 'label' => __('Password expiration'),
                 'choices' => array(
-                    ''  => __('Never expires'),
+                    '0'  => __('Never expires'),
                     '30' => __('30 days'),
                     '60' => __('60 days'),
                     '90' => __('90 days'),
@@ -101,9 +101,10 @@ extends PasswordPolicy {
             $this->processPassword($password);
 
         // Check password expiration
-        if ($this->config->get('expires')
+        $expires = (int) $this->config->get('expires', 0);
+        if ($expires
                 && ($time = $user->getPasswdResetTimestamp())
-                && ($time < (time()-($this->config->get('expires')*86400))))
+                && ($time < (time() - ($expires * 86400))))
             throw new ExpiredPassword(__('Expired Password'));
     }
 
