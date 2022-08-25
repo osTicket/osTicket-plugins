@@ -616,6 +616,7 @@ class MicrosoftEmailOauth2Provider extends GenericOauth2Provider {
     static $urlOptions = [
         'tenant' => 'common',
         'accessType' => 'offline_access',
+        'prompt' => 'consent',
         ];
 }
 ?>
