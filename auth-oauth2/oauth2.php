@@ -269,6 +269,10 @@ class OAuth2EmailAuthBackend implements OAuth2AuthBackend  {
         return $this->account->getEmailId();
     }
 
+    function getEmail() {
+        return $this->account->getEmail();
+    }
+
     function getEmailAddress() {
         return $this->account->email->getEmail();
     }
@@ -306,16 +310,18 @@ class OAuth2EmailAuthBackend implements OAuth2AuthBackend  {
         } catch (Exception $ex) {
             $errors[$err] =  $ex->getMessage();
         }
-        // stash errors (if any) to session and redirect
-        $session = &$_SESSION[':email'][$this->getEmailId()];
-        $session = [];
-        if  ($errors) {
-            $session['errors'] = $errors;
-        } else {
-            $session['msg'] = sprintf('%s: %s',
-                    $this->account->getType(),
-                    __('OAuth2 Authorization Successful'));
-        }
+
+        // stash the results before redirecting
+        $email = $this->getEmail();
+        // TODO: check if email implements StashableTrait
+        if ($errors)
+            $email->stash('errors', $errors);
+        else
+            $email->stash('msg', sprintf('%s: %s',
+                        $this->account->getType(),
+                        __('OAuth2 Authorization Successful')
+                        ));
+        // redirect back to email page
         $this->onSignIn();
     }
 
