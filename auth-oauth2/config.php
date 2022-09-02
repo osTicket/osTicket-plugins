@@ -4,6 +4,19 @@ require_once 'oauth2.php';
 
 class OAuth2Config extends PluginConfig {
 
+    public function getAuthType() {
+        return  $this->get('auth_type', 'auth');
+    }
+
+    public function isAutho() {
+        return ($this->getAuthType()
+                && !strcasecmp($this->getAuthType(), 'autho'));
+    }
+
+    public function isAuthen() {
+        return !$this->isAutho();
+    }
+
     public function getName() {
         return $this->get('auth_name');
     }
@@ -69,7 +82,7 @@ class OAuth2Config extends PluginConfig {
         return Plugin::translate('auth-oauth2');
     }
 
-    function getOptions() {
+    function getAllOptions() {
         list($__, $_N) = self::translate();
         return array(
             'auth_settings' => new SectionBreakField(array(
@@ -85,20 +98,6 @@ class OAuth2Config extends PluginConfig {
                         'length' => 125
                     )
                 )
-            ),
-            'auth_type' => new ChoiceField(array(
-                    'label' => $__('Type'),
-                    'hint' => $__('OAuth2 Type'),
-                    'required' => true,
-                    'choices' => array(
-                        'auth' => $__('Authentication'),
-                        'autho' => $__('Authorization'),
-                        ),
-                    'configuration' => array(
-                        'disabled' => false,
-                    ),
-                    'default' => 'auth',
-                    )
             ),
             'auth_target' => new ChoiceField(array(
                     'label' => $__('Authentication Target'),
@@ -132,38 +131,27 @@ class OAuth2Config extends PluginConfig {
                     )
             ),
             'idp' => new SectionBreakField(array(
-                'label' => $__('Identity Provider (IdP) Details'),
-                'hint' => $__('Details for third-party identity provider'),
+                'label' => $__('OAuth2 Provider (IdP) Details'),
+                'hint' => $__('Authorization instances can be added via Email Account interface'),
             )),
-            'clientId' => new TextboxField(
-                array(
-                    'label' => $__('Client Id'),
-                    'hint' => $__('IdP Client / Application Identifier'),
+            'auth_type' => new ChoiceField(array(
+                    'label' => $__('Type'),
+                    'hint' => $__('OAuth2 Client Type'),
                     'required' => true,
+                    'choices' => array(
+                        'auth' => $__('Authentication'),
+                        'autho' => $__('Authorization'),
+                        ),
                     'configuration' => array(
-                        'size' => 64,
-                        'length' => 0
+                        'disabled' => true,
+                    ),
+                    'default' => $this->getAuthType(),
                     )
-                )
-            ),
-            'clientSecret' => new PasswordField(
-                array(
-                    'widget' => 'PasswordWidget',
-                    'label' => $__('Client Secret'),
-                    'hint' => $__('IdP Client Secret'),
-                    'required' => !$this->getClientSecret(),
-                    'validator' => 'noop',
-                    'configuration' => array(
-                        'size' => 64,
-                        'length' => 0,
-                        'key' => $this->getNamespace(),
-                    )
-                )
             ),
             'redirectUri' => new TextboxField(
                 array(
-                    'label' => $__('Callback Endpoint'),
-                    'hint' => $__('Redirect Uri'),
+                    'label' => $__('Redirect URI'),
+                    'hint' => $__('Callback Endpoint'),
                     'required' => true,
                     'configuration' => array(
                         'size' => 64,
@@ -174,6 +162,35 @@ class OAuth2Config extends PluginConfig {
                             $f->addError(__('Must be a valid API endpont'));
                      },
                     'default' => OAuth2Plugin::callback_url(),
+                )
+            ),
+            'clientId' => new TextboxField(
+                array(
+                    'label' => $__('Client Id'),
+                    'hint' => $__('Client Identifier (Id)'),
+                    'required' => true,
+                    'configuration' => array(
+                        'size' => 64,
+                        'length' => 0,
+                        'placeholder' => $__('Client Id')
+                    )
+                )
+            ),
+            'clientSecret' => new PasswordField(
+                array(
+                    'widget' => 'PasswordWidget',
+                    'label' => $__('Client Secret'),
+                    'hint' => $__('Client Secret'),
+                    'required' => !$this->getClientSecret(),
+                    'validator' => 'noop',
+                    'configuration' => array(
+                        'size' => 64,
+                        'length' => 0,
+                        'key' => $this->getNamespace(),
+                        'placeholder' => $this->getClientSecret()
+                            ? str_repeat('•', strlen($this->getClientSecret()))
+                            : $__('Client Secret'),
+                    )
                 )
             ),
             'urlAuthorize' => new TextboxField(
@@ -236,7 +253,10 @@ class OAuth2Config extends PluginConfig {
                     'size' => 64,
                     'length' => 0
                 ),
-
+                'visibility' => new VisibilityConstraint(
+                    new Q(array('auth_type__eq' => 'auth')),
+                    VisibilityConstraint::HIDDEN
+                    ),
             )),
             'attr_givenname' => new TextboxField(array(
                 'label' => $__('Given Name'),
@@ -246,6 +266,10 @@ class OAuth2Config extends PluginConfig {
                     'size' => 64,
                     'length' => 0
                 ),
+                'visibility' => new VisibilityConstraint(
+                    new Q(array('auth_type__eq' => 'auth')),
+                    VisibilityConstraint::HIDDEN
+                    ),
 
             )),
             'attr_surname' => new TextboxField(array(
@@ -256,7 +280,10 @@ class OAuth2Config extends PluginConfig {
                     'size' => 64,
                     'length' => 0
                 ),
-
+                'visibility' => new VisibilityConstraint(
+                    new Q(array('auth_type__eq' => 'auth')),
+                    VisibilityConstraint::HIDDEN
+                    ),
             )),
             'attr_email' => new TextboxField(array(
                 'label' => $__('Email Address'),
@@ -269,23 +296,80 @@ class OAuth2Config extends PluginConfig {
             )),
         );
     }
+
+    function getOptions() {
+        return  $this->getAllOptions();
+    }
+
+    function getFields() {
+        list($__, $_N) = self::translate();
+        switch ($this->getAuthType()) {
+            case 'autho':
+                // Authorization fields
+                $base =  array_flip(['idp', 'auth_type', 'redirectUri', 'clientId', 'clientSecret',
+                        'urlAuthorize', 'urlAccessToken',
+                        'urlResourceOwnerDetails', 'scopes', 'attr_email',
+                ]);
+                $fields = array_merge($base, array_intersect_key(
+                            $this->getAllOptions(), $base));
+                $fields['attr_email'] = new TextboxField([
+                        'label' => $__('Email Address Attribute'),
+                        'hint' => $__('Please consult your provider docs for the correct attribute to use'),
+                        'required' => true,
+                ]);
+                break;
+            case 'auth':
+            default:
+                $fields = $this->getOptions();
+                break;
+        }
+        return $fields;
+    }
+
+    function pre_save(&$config, &$errors) {
+        list($__, $_N) = self::translate();
+        // Authorization instances can only be managed via Email Account
+        // interface at the moment.
+        if ($this->isAutho())
+            $errors['err'] = $__('Authorization instances can only be managed via Email Account interface at the moment');
+        return !count($errors);
+    }
+
+    public function getFormOptions() {
+        list($__, $_N) = self::translate();
+        return [
+            'notice' => $this->isAutho()
+                ? $__('Authorization instances can only be updated via Email Account interface')
+                : ($this->getClientId()
+                        ? $__('Be careful - changes might break Authentication of the Target Audience')
+                        : ''
+                        ),
+        ];
+    }
 }
 
 class OAuth2EmailConfig extends OAuth2Config {
-    // Only get the basic field options
-    function getOptions() {
-        list($__, $_N) = self::translate();
-        $basic =  array_flip(['clientId', 'clientSecret', 'scopes',
-                'urlAuthorize', 'urlAccessToken', 'urlResourceOwnerDetails',
-                'attr_email', 'redirectUri']);
-        $fields = array_merge($basic, array_intersect_key(
-                    parent::getOptions(), $basic));
-        $fields['attr_email'] = new TextboxField(array(
-                'label' => $__('Email Address Attribute'),
-                'hint' => $__('Please consult your provider docs for the correct attribute to use'),
-                'required' => true,
-            ));
 
-        return $fields;
+    public function getAuthType() {
+        return  $this->get('auth_type', 'autho');
+    }
+
+    // Notices are handled at Email Account level
+    public function getFormOptions() {
+        return [];
+    }
+
+    // This is necessay so the parent can reject updates on Autho instances via plugins
+    // intervace which is doesn't have re-authorization capabilities at the
+    // moment.
+    function pre_save(&$config, &$errors) {
+        return true;
+    }
+
+    function getFields() {
+        // Remove fields not needed on the Email interface
+        return array_diff_key(parent::getFields(),
+                array_flip(['idp', 'auth_type'])
+                );
     }
 }

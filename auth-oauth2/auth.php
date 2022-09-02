@@ -99,11 +99,12 @@ class OAuth2Plugin extends Plugin {
     }
 
     public function bootstrap() {
-        // Get sideloaded instance config
+        // Get sideloaded instance config - this is neccessary for backwards
+        // compatibility before multi-instance support
         $config = $this->getConfig();
         // Only register Authentication backends Authorization Backends are
-        // done on-demand.
-        if ($config->get('auth_type') == 'auth')
+        // done on-demand via Email Account interface
+        if ($config && $config->isAuthen())
             self::registerAuthBackends($config);
     }
 }
