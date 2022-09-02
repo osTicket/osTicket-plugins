@@ -317,7 +317,7 @@ class OAuth2EmailAuthBackend implements OAuth2AuthBackend  {
         if ($errors)
             $email->stash('errors', $errors);
         else
-            $email->stash('msg', sprintf('%s: %s',
+            $email->stash('notice', sprintf('%s: %s',
                         $this->account->getType(),
                         __('OAuth2 Authorization Successful')
                         ));
@@ -579,14 +579,23 @@ class MicrosoftOauth2Provider extends GenericOauth2Provider {
 }
 
 // Authorization Email OAuth Providers
-class OtherEmailOauth2Provider extends GenericOauth2Provider {
+class GenericEmailOauth2Provider extends GenericOauth2Provider {
+   function getPluginInstance($id) {
+       $i = parent::getPluginInstance($id);
+       // Set config class for Email Authorization Providers
+       $i->setConfigClass('OAuth2EmailConfig');
+       return $i;
+    }
+}
+
+class OtherEmailOauth2Provider extends GenericEmailOauth2Provider {
     static $id = 'oauth2:othermail';
     static $name = 'OAuth2 - Other Provider';
     static $defaults = [];
     static $urlOptions = [];
 }
 
-class GoogleEmailOauth2Provider extends GenericOauth2Provider {
+class GoogleEmailOauth2Provider extends GenericEmailOauth2Provider {
     static $id = 'oauth2:gmail';
     static $name = 'OAuth2 - Google';
     static $defaults = [
@@ -606,7 +615,7 @@ class GoogleEmailOauth2Provider extends GenericOauth2Provider {
         ];
 }
 
-class MicrosoftEmailOauth2Provider extends GenericOauth2Provider {
+class MicrosoftEmailOauth2Provider extends GenericEmailOauth2Provider {
     static $id = 'oauth2:msmail';
     static $name = 'OAuth2 - Microsoft';
     static $defaults = [
