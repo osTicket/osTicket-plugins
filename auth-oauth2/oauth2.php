@@ -134,13 +134,17 @@ trait OAuth2AuthenticationTrait {
         $attributes = array();
         $result = array_change_key_case($result, CASE_LOWER);
         foreach ($this->attributes as $attr) {
-            if (!($key=$this->config->getAttributeFor($attr)))
+            if (!($key=strtolower($this->config->getAttributeFor($attr))))
                 continue;
-            $attributes[$attr] = $result[strtolower($key)] ?: null;
+            $attributes[$attr] = $result[$key] ?: null;
         }
-        // Use email as username if none is provided
+        // Use email as username if none is provided or vice versa!
         if (!isset($attributes['username']) && isset($attributes['email']))
             $attributes['username'] = $attributes['email'];
+        elseif (!isset($attributes['email'])
+                && isset($attributes['username'])
+                && Validator::is_email($attributes['username']))
+            $attributes['email'] = $attributes['username'];
 
         return $attributes;
     }
@@ -567,11 +571,13 @@ class MicrosoftOauth2Provider extends GenericOauth2Provider {
     static $name = 'Microsoft';
     static $icon = 'icon-windows';
     static $defaults = [
+        'urlAuthorize' => 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
+        'urlAccessToken' => 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
         'urlResourceOwnerDetails' => 'https://graph.microsoft.com/v1.0/me',
         'scopes' => 'https://graph.microsoft.com/.default',
         'auth_name' => 'Microsoft',
         'auth_service' => 'Azure',
-        'attr_username' => 'mail',
+        'attr_username' => 'userPrincipalName',
         'attr_email' => 'mail',
         'attr_givenname' => 'givenname',
         'attr_surname' => 'surname',
