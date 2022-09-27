@@ -11,7 +11,7 @@ return array(
         "aws/aws-sdk-php" => array(
             'version' => "3.*",
             'map' => array(
-                'aws/aws-sdk-php/src' => 'lib/Aws',
+                'aws/aws-sdk-php/src/{S3*,*.php}' => 'lib/Aws',
                 'guzzlehttp/guzzle/src' => 'lib/GuzzleHttp',
                 'guzzlehttp/promises/src' => 'lib/GuzzleHttp/Promise',
                 'guzzlehttp/psr7/src/' => 'lib/GuzzleHttp/Psr7',
