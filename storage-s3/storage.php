@@ -34,7 +34,7 @@ class S3StorageBackend extends FileStorageBackend {
         $credentials['credentials'] = array(
             'key' => static::$config['aws-key-id'],
             'secret' => Crypto::decrypt(static::$config['secret-access-key'],
-                SECRET_SALT, static::getConfig()->getNamespace()),
+                SECRET_SALT, static::getConfig()->getInstance()->getId())
         );
         if (static::$config['aws-region'])
             $credentials['region'] = static::$config['aws-region'];
@@ -250,8 +250,12 @@ class S3StoragePlugin extends Plugin {
 
     function bootstrap() {
         require_once 'storage.php';
+
+        //TODO: This needs to target a specific instance
+         $bucketPath = sprintf('%s%s', $this->getConfig()->get('bucket'),
+             $this->getConfig()->get('folder') ? '/'. $this->getConfig()->get('folder') : '');
         S3StorageBackend::setConfig($this->getConfig());
-        S3StorageBackend::$desc = sprintf('S3 (%s)', $this->getConfig()->get('bucket'));
+        S3StorageBackend::$desc = sprintf('S3 (%s)', $bucketPath);
         FileStorageBackend::register('3', 'S3StorageBackend');
     }
 }

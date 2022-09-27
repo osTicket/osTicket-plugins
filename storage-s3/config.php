@@ -6,7 +6,7 @@ class S3StoragePluginConfig extends PluginConfig {
 
     // Provide compatibility function for versions of osTicket prior to
     // translation support (v1.9.4)
-    function translate() {
+    static function translate() {
         if (!method_exists('Plugin', 'translate')) {
             return array(
                 function($x) { return $x; },
@@ -96,10 +96,10 @@ class S3StoragePluginConfig extends PluginConfig {
             'key' => $config['aws-key-id'],
             'secret' => $config['secret-access-key']
                 ?: Crypto::decrypt($this->get('secret-access-key'), SECRET_SALT,
-                        $this->getNamespace()),
+                        $this->instance->getId()),
         );
         if ($config['aws-region'])
-            $credentials['region'] = $config['aws-region'];
+            $credentials['region'] = array_key_first(json_decode($config['aws-region'], true));
 
         if (!$credentials['credentials']['secret'])
             $this->getForm()->getField('secret-access-key')->addError(
@@ -125,7 +125,7 @@ class S3StoragePluginConfig extends PluginConfig {
 
         if (!$errors && $config['secret-access-key'])
             $config['secret-access-key'] = Crypto::encrypt($config['secret-access-key'],
-                SECRET_SALT, $this->getNamespace());
+                SECRET_SALT, $this->instance->getId());
         else
             $config['secret-access-key'] = $this->get('secret-access-key');
 
