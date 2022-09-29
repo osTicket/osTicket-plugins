@@ -90,16 +90,31 @@ class S3StoragePluginConfig extends PluginConfig {
         );
     }
 
+    function getSecret($namespace, $config) {
+        return $config['secret-access-key'] ?: Crypto::decrypt($this->get('secret-access-key'),
+            SECRET_SALT, $namespace);
+    }
+
     function pre_save(&$config, &$errors) {
         list($__, $_N) = self::translate();
+
+        $namespace = $this->getNamespace();
+        if (!$this->getSecret($namespace, $config)) {
+            $pluginId = $this->instance->getPluginId();
+            $secret = $this->getSecret(sprintf('plugin.%s', $pluginId), $config);
+        }
+
         $credentials['credentials'] = array(
             'key' => $config['aws-key-id'],
-            'secret' => $config['secret-access-key']
-                ?: Crypto::decrypt($this->get('secret-access-key'), SECRET_SALT,
-                        $this->instance->getId()),
+            'secret' => $secret ?: $this->getSecret($namespace, $config),
         );
-        if ($config['aws-region'])
-            $credentials['region'] = array_key_first(json_decode($config['aws-region'], true));
+
+        if ($config['aws-region']) {
+            if (is_array(json_decode($config['aws-region'], true)))
+                $credentials['region'] = array_key_first(json_decode($config['aws-region'], true));
+            else
+                $credentials['region'] = $config['aws-region'];
+        }
 
         if (!$credentials['credentials']['secret'])
             $this->getForm()->getField('secret-access-key')->addError(
@@ -125,7 +140,7 @@ class S3StoragePluginConfig extends PluginConfig {
 
         if (!$errors && $config['secret-access-key'])
             $config['secret-access-key'] = Crypto::encrypt($config['secret-access-key'],
-                SECRET_SALT, $this->instance->getId());
+                SECRET_SALT, $this->getNamespace());
         else
             $config['secret-access-key'] = $this->get('secret-access-key');
 

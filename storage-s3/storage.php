@@ -25,17 +25,32 @@ class S3StorageBackend extends FileStorageBackend {
         static::$config = $config->getInfo();
         static::$__config = $config;
     }
+
+    static function decryptSecret($namespace) {
+        return Crypto::decrypt(static::$config['secret-access-key'],
+            SECRET_SALT, $namespace);
+    }
+
     function getConfig() {
         return static::$__config;
     }
 
     function __construct($meta) {
         parent::__construct($meta);
+
+        $namespace = static::getConfig()->getNamespace();
+        //if the current namespace doesn't return the secret, (plugin.id.instance.id)
+        //try decrypting only the plugin id (plugin.id)
+        if (!$secret = self::decryptSecret($namespace)) {
+            $pluginId = static::getConfig()->getInstance()->getPluginId();
+            $secret = self::decryptSecret(sprintf('plugin.%s', $pluginId));
+        }
+
         $credentials['credentials'] = array(
             'key' => static::$config['aws-key-id'],
-            'secret' => Crypto::decrypt(static::$config['secret-access-key'],
-                SECRET_SALT, static::getConfig()->getInstance()->getId())
+            'secret' => $secret,
         );
+
         if (static::$config['aws-region'])
             $credentials['region'] = static::$config['aws-region'];
 
