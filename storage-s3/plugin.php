@@ -2,7 +2,8 @@
 
 return array(
     'id' =>             'storage:s3',
-    'version' =>        '0.3',
+    'version' =>        '0.5',
+    'ost_version' =>    '1.17', # Require osTicket v1.17+
     'name' =>           /* trans */ 'Attachments hosted in Amazon S3',
     'author' =>         'Jared Hancock, Kevin Thorne',
     'description' =>    /* trans */ 'Enables storing attachments in Amazon S3',
@@ -11,7 +12,8 @@ return array(
         "aws/aws-sdk-php" => array(
             'version' => "3.*",
             'map' => array(
-                'aws/aws-sdk-php/src/{S3*,*.php}' => 'lib/Aws',
+                'aws/aws-sdk-php/src/{Api*,Arn*,ClientSideMonitoring*,Credentials*,DefaultsMode*,Endpoint*,Exception*,Handler*,Retry*,S3*,Signature*,*.php}' => 'lib/Aws',
+                'aws/aws-sdk-php/src/data' => 'lib/Aws',
                 'guzzlehttp/guzzle/src' => 'lib/GuzzleHttp',
                 'guzzlehttp/promises/src' => 'lib/GuzzleHttp/Promise',
                 'guzzlehttp/psr7/src/' => 'lib/GuzzleHttp/Psr7',

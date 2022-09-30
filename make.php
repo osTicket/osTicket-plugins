@@ -404,6 +404,8 @@ class PluginBuilder extends Module {
                 if (!isset($info['map']))
                     continue;
                 foreach ($info['map'] as $lib=>$local) {
+                    if (preg_match('/{+(.*?)}/', $lib))
+                        $lib = dirname($lib);
                     $phar_path = trim($local, '/').'/';
                     $full = rtrim(dirname(__file__).'/lib/'.$lib,'/').'/';
                     $files = new RecursiveIteratorIterator(
