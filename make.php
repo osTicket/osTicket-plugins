@@ -404,6 +404,8 @@ class PluginBuilder extends Module {
                 if (!isset($info['map']))
                     continue;
                 foreach ($info['map'] as $lib=>$local) {
+                    if (preg_match('/{+(.*?)}/', $lib))
+                        $lib = dirname($lib);
                     $phar_path = trim($local, '/').'/';
                     $full = rtrim(dirname(__file__).'/lib/'.$lib,'/').'/';
                     $files = new RecursiveIteratorIterator(
@@ -495,6 +497,15 @@ class PluginBuilder extends Module {
             copy($left, $right);
             return;
         }
+
+        // See if we need to do filtering via expandable search
+        if (preg_match('/{+(.*?)}/', $source)) {
+            foreach (glob($source, GLOB_BRACE) as $_source)
+                $this->mapDependencies($options, $lib, $local, $_source,
+                 ($dest.'/'.basename($_source)));
+            return;
+        }
+
         foreach (
             $iterator = new RecursiveIteratorIterator(
                 new RecursiveDirectoryIterator($source, RecursiveDirectoryIterator::SKIP_DOTS),
