@@ -13,7 +13,7 @@ return array(
             'version' => "3.*",
             'map' => array(
                 'aws/aws-sdk-php/src/{Api*,Arn*,ClientSideMonitoring*,Credentials*,DefaultsMode*,Endpoint*,Exception*,Handler*,Retry*,S3*,Signature*,*.php}' => 'lib/Aws',
-                'aws/aws-sdk-php/src/data' => 'lib/Aws',
+                'aws/aws-sdk-php/src/data' => 'lib/Aws/data',
                 'guzzlehttp/guzzle/src' => 'lib/GuzzleHttp',
                 'guzzlehttp/promises/src' => 'lib/GuzzleHttp/Promise',
                 'guzzlehttp/psr7/src/' => 'lib/GuzzleHttp/Psr7',
