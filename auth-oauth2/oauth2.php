@@ -313,11 +313,23 @@ class OAuth2EmailAuthBackend implements OAuth2AuthBackend  {
 
                 if (!isset($attrs['email']))
                     $errors[$err] = $this->error_msg(self::ERR_EMAIL_ATTR, $attrs);
-                elseif ($this->isStrict() && !$this->signIn($attrs))
-                    $errors[$err] = $this->error_msg(self::ERR_EMAIL_MISMATCH, $attrs);
                 elseif (!$info['refresh_token'])
                     $errors[$err] = $this->error_msg(self::ERR_REFRESH_TOKEN);
-                elseif (!$this->updateCredentials($info, $errors))
+                elseif (!$this->signIn($attrs)) {
+                    // On strict mode email mismatch is an error, otherwise
+                    // set email address being authorized as the resource
+                    // owner - with the assumption that a global admin
+                    // authorized the account.
+                    if ($this->isStrict())
+                        $errors[$err] = $this->error_msg(self::ERR_EMAIL_MISMATCH, $attrs);
+                    else
+                        $info['resource_owner_email'] = $this->getEmailAddress();
+                }
+
+                // Update the credentials if no validation errors
+                if (!$errors
+                        && !$this->updateCredentials($info, $errors)
+                        && !isset($errors[$err]))
                      $errors[$err] = $this->error_msg(self::ERR_UNKNOWN);
             }
         } catch (Exception $ex) {
