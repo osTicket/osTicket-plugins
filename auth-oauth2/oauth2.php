@@ -64,6 +64,10 @@ trait OAuth2AuthenticationTrait {
     private $provider;
     // debug mode flag
     private $debug = false;
+    // Strict flag
+    // TODO: Make it configurable (checkbox)
+    private $strict = false;
+
     // SESSION store for data like AuthNRequestID
     private $session;
     // Configuration store
@@ -103,6 +107,10 @@ trait OAuth2AuthenticationTrait {
         } catch (Exception $ex) {
             return false;
         }
+    }
+
+    private function isStrict() {
+        return (bool) $this->strict;
     }
 
     function getId() {
@@ -302,9 +310,10 @@ class OAuth2EmailAuthBackend implements OAuth2AuthBackend  {
                     'resource_owner_id' => $token->getResourceOwnerId(),
                     'resource_owner_email' => $attrs['email'],
                 ];
+
                 if (!isset($attrs['email']))
                     $errors[$err] = $this->error_msg(self::ERR_EMAIL_ATTR, $attrs);
-                elseif (!$this->signIn($attrs))
+                elseif ($this->isStrict() && !$this->signIn($attrs))
                     $errors[$err] = $this->error_msg(self::ERR_EMAIL_MISMATCH, $attrs);
                 elseif (!$info['refresh_token'])
                     $errors[$err] = $this->error_msg(self::ERR_REFRESH_TOKEN);
@@ -637,7 +646,6 @@ class MicrosoftEmailOauth2Provider extends GenericEmailOauth2Provider {
     static $urlOptions = [
         'tenant' => 'common',
         'accessType' => 'offline_access',
-        'prompt' => 'consent',
         ];
 }
 ?>
