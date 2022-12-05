@@ -440,7 +440,7 @@ class StaffLDAPAuthentication extends StaffAuthenticationBackend
         $hit =  $this->_ldap->lookup($dn);
         if ($hit) {
             $hit['backend'] = static::$id;
-            $hit['id'] = static::$id . ':' . $hit['dn'];
+            $hit['id'] = $this->getBkId() . ':' . $hit['dn'];
         }
         return $hit;
     }
@@ -452,7 +452,7 @@ class StaffLDAPAuthentication extends StaffAuthenticationBackend
         $hits = $this->_ldap->search($query);
         foreach ($hits as &$h) {
             $h['backend'] = static::$id;
-            $h['id'] = static::$id . ':' . $h['dn'];
+            $h['id'] = $this->getBkId() . ':' . $h['dn'];
         }
         return $hits;
     }
