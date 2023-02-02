@@ -386,7 +386,7 @@ class LDAPAuthentication {
                     $this->getSearchBase(),
                     sprintf('(|(userPrincipalName=%s)(samAccountName=%s))', $dn, $samid),
                     $opts);
-                if (!PEAR::isError($r) && $r->count())
+                if (!PEAR::isError($r) && $r->count() && $r->current())
                     $dn = $r->current()->dn();
             }
 
