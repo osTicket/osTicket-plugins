@@ -341,6 +341,10 @@ class OAuth2EmailAuthBackend implements OAuth2AuthBackend  {
     public function triggerAuth() {
         // Regenerate OAuth2 auth request
         $urlOptions = $this->provider->getUrlOptions() ?: [];
+        // If Admin Consent is required add it to the urlOptions array.
+        if ($this->config->getOAuth2ConsentPrompt()){
+            $urlOptions = array_merge($urlOptions, ['prompt' => 'consent']);
+        }
         $authUrl = $this->client->getAuthorizationUrl($urlOptions);
         // Get the state generated for you and store it to the session.
         $this->setState($this->client->getState());
