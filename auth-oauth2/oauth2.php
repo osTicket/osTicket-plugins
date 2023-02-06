@@ -323,7 +323,14 @@ class OAuth2EmailAuthBackend implements OAuth2AuthBackend  {
                     if ($this->isStrict())
                         $errors[$err] = $this->error_msg(self::ERR_EMAIL_MISMATCH, $attrs);
                     else
-                        $info['resource_owner_email'] = $this->getEmailAddress();
+                        // In Microsoft 365 you MUST send emails from a licenced User Mailbox,
+                        // if this is a Shared Mailbox the emails need to be collected from the
+                        // Shared Mailbox, but need to be sent from a User Mailbox.
+                        // This is typically the account you will authenticate with in the
+                        // Microsoft 365 challenge when configuring OAuth2 for the mailbox.
+                        if (!(strcasecmp(($this->account->getType()), "smtp") == 0)
+                                && !(strcasecmp(($this->account->getProtocol()), "smtp") == 0))
+                            $info['resource_owner_email'] = $this->getEmailAddress();
                 }
 
                 // Update the credentials if no validation errors
