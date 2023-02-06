@@ -64,9 +64,6 @@ trait OAuth2AuthenticationTrait {
     private $provider;
     // debug mode flag
     private $debug = false;
-    // Strict flag
-    // TODO: Make it configurable (checkbox)
-    private $strict = false;
 
     // SESSION store for data like AuthNRequestID
     private $session;
@@ -110,7 +107,7 @@ trait OAuth2AuthenticationTrait {
     }
 
     private function isStrict() {
-        return (bool) $this->strict;
+        return (bool) $this->config->getOAuth2StrictMode();
     }
 
     function getId() {

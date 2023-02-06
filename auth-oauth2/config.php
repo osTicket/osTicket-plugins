@@ -58,6 +58,10 @@ class OAuth2Config extends PluginConfig {
         return $this->get("attr_$name", $default);
     }
 
+    public function getOAuth2StrictMode() {
+        return $this->get('oauth2_strict_mode');
+    }
+
     public function getClientSettings() {
         $scopes =  $this->getScopes();
         $settings = [
@@ -294,6 +298,12 @@ class OAuth2Config extends PluginConfig {
                     'length' => 0
                 ),
             )),
+            'oauth2_strict_mode' => new BooleanField(array(
+                    'required' => false,
+                    'default'=>false,
+                    'configuration'=>array(
+                        'desc' => __('Enable OAuth2 Strict Email Matching'))
+            )),
         );
     }
 
@@ -308,7 +318,7 @@ class OAuth2Config extends PluginConfig {
                 // Authorization fields
                 $base =  array_flip(['idp', 'auth_type', 'redirectUri', 'clientId', 'clientSecret',
                         'urlAuthorize', 'urlAccessToken',
-                        'urlResourceOwnerDetails', 'scopes', 'attr_email',
+                        'urlResourceOwnerDetails', 'scopes', 'attr_email', 'oauth2_strict_mode',
                 ]);
                 $fields = array_merge($base, array_intersect_key(
                             $this->getAllOptions(), $base));
