@@ -465,9 +465,11 @@ abstract class OAuth2ProviderBackend extends OAuth2AuthorizationBackend {
 
         try {
             $token = $bk->refreshAccessToken($refreshToken);
-            return [
-                'access_token' => $token->getToken(),
-                'expires' => $token->getExpires()];
+            return array_filter([
+		'access_token' => $token->getToken(),
+		'refresh_token' => $token->getRefreshToken(),
+		'expires' => $token->getExpires()
+	    ]);
         } catch( Exception $ex) {
             $errors['refresh_token'] = $ex->getMessage();
         }
