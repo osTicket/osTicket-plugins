@@ -64,9 +64,6 @@ trait OAuth2AuthenticationTrait {
     private $provider;
     // debug mode flag
     private $debug = false;
-    // Strict flag
-    // TODO: Make it configurable (checkbox)
-    private $strict = false;
 
     // SESSION store for data like AuthNRequestID
     private $session;
@@ -107,10 +104,6 @@ trait OAuth2AuthenticationTrait {
         } catch (Exception $ex) {
             return false;
         }
-    }
-
-    private function isStrict() {
-        return (bool) $this->strict;
     }
 
     function getId() {
@@ -277,6 +270,14 @@ class OAuth2EmailAuthBackend implements OAuth2AuthBackend  {
     const ERR_EMAIL_MISMATCH = 2;
     const ERR_REFRESH_TOKEN = 3;
 
+    private function isStrict() {
+        // TODO: Require osTicket v1.18 and delegate strict checking to
+        // the email account ($this->account->isStrict())
+        // For now the flag is being set via the provider by overloading
+        // backend id
+        return ($this->provider && $this->provider->isStrict());
+    }
+
     function getEmailId() {
         return $this->account->getEmailId();
     }
@@ -310,7 +311,6 @@ class OAuth2EmailAuthBackend implements OAuth2AuthBackend  {
                     'resource_owner_id' => $token->getResourceOwnerId(),
                     'resource_owner_email' => $attrs['email'],
                 ];
-
                 if (!isset($attrs['email']))
                     $errors[$err] = $this->error_msg(self::ERR_EMAIL_ATTR, $attrs);
                 elseif (!$info['refresh_token'])
@@ -406,9 +406,16 @@ abstract class OAuth2ProviderBackend extends OAuth2AuthorizationBackend {
     private $plugin_id;
     static $defaults = [];
 
+    // Strict flag
+    private $strict = false;
+
     function __construct($options=[]) {
         if (isset($options['plugin_id']))
             $this->plugin_id = (int) $options['plugin_id'];
+    }
+
+    function isStrict() {
+        return (bool) $this->strict;
     }
 
     function getId() {
@@ -466,7 +473,7 @@ abstract class OAuth2ProviderBackend extends OAuth2AuthorizationBackend {
     }
 
     function getEmailAuthBackend($id)  {
-        list($auth, $a, $i) = self::parseId($id);
+        list($auth, $a, $i, $strict) = self::parseId($id);
         if (!strcasecmp($auth, $this->getId())
                 && ($plugin=$this->getPlugin())
                 && $plugin->isActive()
@@ -474,6 +481,8 @@ abstract class OAuth2ProviderBackend extends OAuth2AuthorizationBackend {
                 && ($config=$instance->getConfig())
                 && ($account=EmailAccount::lookup((int) $a))
                 && $account->isEnabled()) {
+            // Set strict flag
+            $this->strict = (bool) $strict;
             $bk = new  OAuth2EmailAuthBackend($config, $this);
             $bk->account = $account;
             return  $bk;
@@ -552,7 +561,7 @@ class OAuth2Client extends GenericProvider {
 }
 
 
-class GenericOauth2Provider extends Oauth2ProviderBackend {
+class GenericOauth2Provider extends OAuth2ProviderBackend {
     static $id = 'oauth2:other';
     static $name = 'OAuth2 - Other';
     static $defaults = [];
