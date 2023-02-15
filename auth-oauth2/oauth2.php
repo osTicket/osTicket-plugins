@@ -311,30 +311,17 @@ class OAuth2EmailAuthBackend implements OAuth2AuthBackend  {
                     'resource_owner_id' => $token->getResourceOwnerId(),
                     'resource_owner_email' => $attrs['email'],
                 ];
+
                 if (!isset($attrs['email']))
                     $errors[$err] = $this->error_msg(self::ERR_EMAIL_ATTR, $attrs);
                 elseif (!$info['refresh_token'])
                     $errors[$err] = $this->error_msg(self::ERR_REFRESH_TOKEN);
-                elseif (!$this->signIn($attrs)) {
-                    // SignIn failure indicates email mismatch.
-                    if ($this->isStrict()) {
-                        // On strict mode email mismatch is an error, otherwise
-                        // the email address being authorized is used as the resource
-                        // owner - with the assumption that a global admin
-                        // or a service account authorized the account.
-                        $errors[$err] = $this->error_msg(self::ERR_EMAIL_MISMATCH, $attrs);
-                    } elseif (($this->provider instanceof MicrosoftEmailOauth2Provider)
-                        && strcasecmp($this->account->getType(), "smtp") == 0) {
-                        // In Microsoft 365 you MUST send emails from a
-                        // licenced User Mailbox, if this is a Shared
-                        // Mailbox the emails need to be collected from the
-                        // Shared Mailbox, but need to be sent from a User Mailbox.
-                        // This is typically the account you will authenticate with in the
-                        // Microsoft 365 challenge when configuring OAuth2 for the mailbox.
-                        $info['resource_owner_email'] = $this->getEmailAddress();
-                    }
+                elseif (!$this->signIn($attrs) && $this->isStrict()) {
+                    // On strict mode email mismatch is an error
+                    // TODO: Move Strict checking to osTiket core on
+                    // credentials update.
+                    $errors[$err] = $this->error_msg(self::ERR_EMAIL_MISMATCH, $attrs);
                 }
-
                 // Update the credentials if no validation errors
                 if (!$errors
                         && !$this->updateCredentials($info, $errors)
