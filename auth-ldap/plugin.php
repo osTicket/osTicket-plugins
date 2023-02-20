@@ -13,6 +13,7 @@ return array(
     'map' => array(
         'pear-pear.php.net/net_ldap2' => 'include'
     ),
+    'phpDependency' =>  'ldap',
 );
 
 ?>
