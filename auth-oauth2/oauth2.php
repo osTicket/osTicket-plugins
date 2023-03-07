@@ -222,7 +222,7 @@ implements OAuth2AuthBackend  {
     }
 
     private function onSignIn() {
-        $this->redirectTo(osTicket::get_base_url().'scp/');
+        $this->redirectTo($_SESSION['_staff']['auth']['dest'] ?: osTicket::get_base_url().'scp/');
     }
 
 }
@@ -258,7 +258,7 @@ implements OAuth2AuthBackend {
     }
 
     private function onSignIn() {
-        $this->redirectTo(osTicket::get_base_url());
+        $this->redirectTo($_SESSION['_client']['auth']['dest'] ?: osTicket::get_base_url());
     }
 }
 
