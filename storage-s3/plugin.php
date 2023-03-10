@@ -27,7 +27,7 @@ return array(
         'pre-autoload-dump' => 'Aws\\Script\\Composer\\Composer::removeUnusedServices',
     ),
     'extra' => array(
-        'aws/aws-sdk-php' => 'S3',
+        'aws/aws-sdk-php' => ['S3'],
     ),
     'plugin' =>         'storage.php:S3StoragePlugin'
 );
