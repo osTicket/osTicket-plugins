@@ -11,7 +11,7 @@ if ($_REQUEST['type'])
 
 if($_REQUEST['state'])
     $qs += array('state' => Format::htmlchars($_REQUEST['state']));
-$state=__('All');
+$state='All';
 
 if ($_REQUEST['state'])
   $state=Format::htmlchars($_REQUEST['state']);
