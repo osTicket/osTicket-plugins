@@ -238,7 +238,7 @@ class LDAPAuthentication {
                 $schema['lookup']),
             array('sizelimit' => 1)
         );
-        if (PEAR::isError($r) || !$r->count())
+        if (PEAR::isError($r) || !$r->count() || !$r->current())
             return null;
 
         // Attempt to bind as the DN of the user looked up with the password
