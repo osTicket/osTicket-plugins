@@ -9,10 +9,26 @@ extends PluginConfig {
                 'required' => true,
                 'label' => __('Minimum length'),
                 'configuration' => array(
-                    'validator' => 'number',
+                    'validator' => 'regex',
+                    'regex' => '/(^[1-9]|^[1-9][0-9]|^1[0-1][0-9]|^12[0-8])$/',
+                    'validator-error' => sprintf('%s %s', __('Minimum'),
+                            __('length must be between 1 and 128')),
                     'size' => 4,
                 ),
                 'default' => 8,
+                'hint' => __('Minimum characters required'),
+            )),
+            'maxlength' => new TextboxField(array(
+                'required' => true,
+                'label' => __('Maximum length'),
+                'configuration' => array(
+                    'validator' => 'regex',
+                    'regex' => '/(^[1-9]|^[1-9][0-9]|^1[0-1][0-9]|^12[0-8])$/',
+                    'validator-error' => sprintf('%s %s', __('Maximum'),
+                            __('length must be between 1 and 128')),
+                    'size' => 4,
+                ),
+                'default' => 128,
                 'hint' => __('Minimum characters required'),
             )),
             // Classes of characters
@@ -80,6 +96,20 @@ extends PluginConfig {
             )),
         );
     }
+
+    function pre_save(&$config, &$errors) {
+        if ($config['length'] >= $config['maxlength']) {
+            $this->getForm()->getField('length')->addError(
+                __("Minimum length must be smaller than Maximum length"));
+            $errors['err'] = __('Unable to update the Instance');
+        }
+
+        global $msg;
+        if (!$errors)
+            $msg = __('Instance updated successfully');
+
+        return !$errors;
+    }
 }
 
 class PasswordManagementPolicy
@@ -122,10 +152,16 @@ extends PasswordPolicy {
         }
 
         // Password length
-        if (mb_strlen($password) < $this->config->get('length')) {
+        $pwdlen = mb_strlen($password);
+        if ($pwdlen < $this->config->get('length')) {
             throw new BadPassword(
                     sprintf(__('Password is too short — must be %d characters'),
                         $this->config->get('length'))
+                );
+        } elseif ($pwdlen > $this->config->get('maxlength')) {
+            throw new BadPassword(
+                    sprintf(__('Password is too long — must be a maximum of %d characters'),
+                        $this->config->get('maxlength'))
                 );
         }
 
