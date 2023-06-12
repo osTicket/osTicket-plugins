@@ -515,6 +515,8 @@ abstract class OAuth2ProviderBackend extends OAuth2AuthorizationBackend {
         OAuth2AuthenticationBackend::register(new
                 MicrosoftOAuth2Provider($options));
         OAuth2AuthenticationBackend::register(new
+                OktaOAuth2Provider($options));
+        OAuth2AuthenticationBackend::register(new
                 OtherOAuth2Provider($options));
     }
 
@@ -609,6 +611,24 @@ class MicrosoftOauth2Provider extends GenericOauth2Provider {
         'attr_email' => 'mail',
         'attr_givenname' => 'givenname',
         'attr_surname' => 'surname',
+        ];
+}
+
+class OktaOauth2Provider extends GenericOauth2Provider {
+    static $id = 'oauth2:okta';
+    static $name = 'Okta';
+    static $icon = 'icon-circle-blank';
+    static $defaults = [
+        'urlAuthorize' => 'https://${yourOktaDomain}/oauth2/v1/authorize',
+        'urlAccessToken' => 'https://${yourOktaDomain}/oauth2/v1/token',
+        'urlResourceOwnerDetails' => 'https://${yourOktaDomain}/oauth2/v1/userinfo',
+        'scopes' => 'openid profile email',
+        'auth_name' => 'Okta',
+        'auth_service' => 'Okta',
+        'attr_username' => 'userName',
+        'attr_email' => 'email',
+        'attr_givenname' => 'given_name',
+        'attr_surname' => 'family_name',
         ];
 }
 
