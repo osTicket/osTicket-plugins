@@ -433,7 +433,7 @@ class AuditEntry extends VerySimpleModel {
           $qwhere.=' AND object_type='.db_input($_REQUEST['type'] ?: 'D');
           if ($hide_views)
             $qwhere.=' AND event_id='.db_input(Event::getIdByName($_REQUEST['state']));
-          if ($_REQUEST['state'] && $_REQUEST['state'] != __('All')) {
+          if ($_REQUEST['state'] && $_REQUEST['state'] != 'All') {
               $event_id = Event::getIdByName(lcfirst($_REQUEST['state']));
               $qwhere.=' AND event_id='.db_input($event_id);
           }
