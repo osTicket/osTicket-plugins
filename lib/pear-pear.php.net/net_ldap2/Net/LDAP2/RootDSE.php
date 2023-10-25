@@ -10,7 +10,7 @@
 * @author    Jan Wagner <wagner@netsols.de>
 * @copyright 2009 Jan Wagner
 * @license   http://www.gnu.org/licenses/lgpl-3.0.txt LGPLv3
-* @version   SVN: $Id: RootDSE.php 286718 2009-08-03 07:30:49Z beni $
+* @version   SVN: $Id$
 * @link      http://pear.php.net/package/Net_LDAP2/
 */
 
@@ -41,7 +41,7 @@ class Net_LDAP2_RootDSE extends PEAR
     *
     * @param Net_LDAP2_Entry &$entry Net_LDAP2_Entry object of the RootDSE
     */
-    protected function __construct(&$entry)
+    public function __construct(&$entry)
     {
         $this->_entry = $entry;
     }
@@ -70,7 +70,6 @@ class Net_LDAP2_RootDSE extends PEAR
                                 'altServer',
                                 'supportedExtension',
                                 'supportedControl',
-                                'supportedCapabilities', # Added for AD detection
                                 'supportedSASLMechanisms',
                                 'supportedLDAPVersion',
                                 'subschemaSubentry' );
