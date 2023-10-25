@@ -117,8 +117,8 @@ class LDAPAuthentication {
         if ($servers) {
             $hosts = array();
             foreach ($servers as $h)
-                if (preg_match('/([^:]+):(\d{1,4})/', $h, $matches))
-                    $hosts[] = array('host' => $matches[1], 'port' => (int) $matches[2]);
+                if (preg_match('/((ldaps?:\/\/)?([^:]+)):(\d{1,4})/', $h, $matches))
+                    $hosts[] = array('host' => $matches[1], 'port' => (int) $matches[4]);
                 else
                     $hosts[] = array('host' => $h);
             return $hosts;

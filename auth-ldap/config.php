@@ -158,8 +158,8 @@ class LdapConfig extends PluginConfig {
             else {
                 $servers = array();
                 foreach (preg_split('/\s+/', $config['servers']) as $host)
-                    if (preg_match('/([^:]+):(\d{1,4})/', $host, $matches))
-                        $servers[] = array('host' => $matches[1], 'port' => (int) $matches[2]);
+                    if (preg_match('/((ldaps?:\/\/)?([^:]+)):(\d{1,4})/', $host, $matches))
+                        $servers[] = array('host' => $matches[1], 'port' => (int) $matches[4]);
                     else
                         $servers[] = array('host' => $host);
             }
