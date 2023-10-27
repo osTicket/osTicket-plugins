@@ -106,6 +106,27 @@ class LdapConfig extends PluginConfig {
                     '2307' => 'Posix Account (rfc 2307)',
                 ),
             )),
+            'search_filter_options' => new SectionBreakField(array(
+                'label' => $__('Custom search filters'),
+                'hint' => $__('Custom search filter options in case the pre-supplied ones are non-sufficient.')
+            )),
+            'use_custom_filters' => new BooleanField(array(
+                'label' => $__('Use Custom Filters'),
+                'default' => false,
+                'configuration' => array(
+                    'desc' => $__('Use Custom Search and Authentication Filters')
+                )
+            )),
+            'search_filter' => new TextboxField(array(
+                'label' => $__('LDAP Filter for searching users'),
+                'hint' => $__('Used when searching for users. {q} will be replaced with the search term.'),
+                'configuration' => array('size'=>70, 'length'=>160),
+            )),
+            'auth_filter' => new TextboxField(array(
+                'label' => $__('LDAP Filter for authentication'),
+                'hint' => $__('Used when authenticating. {q} will be replaced with the user id.'),
+                'configuration' => array('size'=>70, 'length'=>160),
+            )),
 
             'auth' => new SectionBreakField(array(
                 'label' => $__('Authentication Modes'),

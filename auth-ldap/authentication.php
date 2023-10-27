@@ -228,6 +228,8 @@ class LDAPAuthentication {
         if (!$this->_bind($c))
             return null;
 
+        $auth_filter = $this->getConfig()->get('use_custom_filters')?($this->getConfig()->get('auth_filter')):($schema['lookup']);
+
         $r = $c->search(
             $this->getSearchBase(),
             str_replace(
@@ -235,7 +237,7 @@ class LDAPAuthentication {
                 // Assume email address if the $username contains an @ sign
                 array(strpos($username, '@') ? $schema['email'] : $schema['username'],
                     $username),
-                $schema['lookup']),
+                $auth_filter),
             array('sizelimit' => 1)
         );
         if (PEAR::isError($r) || !$r->count() || !$r->current())
@@ -307,9 +309,12 @@ class LDAPAuthentication {
 
         $schema = static::$schemas[$this->getSchema($c)];
         $schema = $schema['user'];
+
+        $search_filter = ($this->getConfig()->get('use_custom_filters'))?($this->getConfig()->get('search_filter')):($schema['search']);
+
         $r = $c->search(
             $this->getSearchBase(),
-            str_replace('{q}', $query, $schema['search']),
+            str_replace('{q}', $query, $search_filter),
             array('attributes' => array_filter(flatten(array(
                 $schema['first'], $schema['last'], $schema['full'],
                 $schema['phone'], $schema['mobile'], $schema['email'],
