@@ -2,11 +2,11 @@
 
 return array(
     'id' =>             '2fa:auth', # notrans
-    'version' =>        '0.3',
+    'version' =>        '0.3.1',
     'name' =>           /* trans */ 'Two Factor Authenticator',
     'author' =>         'Adriane Alexander',
-    'description' =>    /* trans */ 'Provides 2 Factor Authentication
-                        using an Authenticator App',
+    'contributor' =>    'Ezequiel Lage (@ezlage)',
+    'description' =>    /* trans */ 'Provides Two-Factor Authentication using an Authenticator App',
     'url' =>            'https://www.osticket.com/download',
     'plugin' =>         'auth2fa.php:Auth2FAPlugin',
     'requires' => array(
