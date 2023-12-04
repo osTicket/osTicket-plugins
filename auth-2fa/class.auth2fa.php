@@ -45,7 +45,8 @@ class Auth2FABackend extends TwoFactorAuthenticationBackend {
                 'validator'=>'number',
                 'hint'=>__('Please enter the code from your Authenticator app'),
                 'configuration'=>array(
-                    'size'=>40, 'length'=>40,
+                    'size'=>30,
+                    'length'=>12,
                     'autocomplete' => 'one-time-code',
                     'inputmode' => 'numeric',
                     'pattern' => '[0-9]*',
