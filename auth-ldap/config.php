@@ -104,6 +104,7 @@ class LdapConfig extends PluginConfig {
                     'auto' => '— '.$__('Automatically Detect').' —',
                     'msad' => 'Microsoft® Active Directory',
                     '2307' => 'Posix Account (rfc 2307)',
+                    'zimbra' => 'Zimbra',
                 ),
             )),
 

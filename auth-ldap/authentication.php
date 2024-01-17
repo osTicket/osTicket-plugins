@@ -63,6 +63,22 @@ class LDAPAuthentication {
                 'lookup' => '(&(objectClass=inetOrgPerson)({attr}={q}))',
             ),
         ),
+        // Zimbra LDAP is a bit different than standard ldap
+        'zimbra' => array(
+            'user' => array(
+                'filter' => '(objectClass=zimbraAccount)',
+                'first' => 'givenName',
+                'last' => 'sn',
+                'full' => array('displayName', 'cn'),
+                'email' => 'mail',
+                'phone' => 'telephoneNumber',
+                'mobile' => 'mobile',
+                'username' => 'uid',
+                'dn' => 'uid={username},{search_base}',
+                'search' => '(&(objectClass=zimbraAccount)(|(uid={q}*)(displayName={q}*)(cn={q}*)))',
+                'lookup' => '(&(objectClass=zimbraAccount)({attr}={q}))',
+            ),
+        ),
     );
 
     var $config;
