@@ -2,10 +2,10 @@
 
 return array(
     'id' =>             'storage:s3',
-    'version' =>        '0.5',
+    'version' =>        '0.6',
     'ost_version' =>    '1.17', # Require osTicket v1.17+
     'name' =>           /* trans */ 'Attachments hosted in Amazon S3',
-    'author' =>         'Jared Hancock, Kevin Thorne',
+    'author' =>         'Jared Hancock, Kevin Thorne, Victor Manuel Agudelo',
     'description' =>    /* trans */ 'Enables storing attachments in Amazon S3',
     'url' =>            'http://www.osticket.com/plugins/storage-s3',
     'requires' => array(

@@ -27,6 +27,33 @@ class S3StoragePluginConfig extends PluginConfig {
                 'label' => $__('S3 Folder Path'),
                 'configuration' => array('size'=>40),
             )),
+            'storage_type' => new ChoiceField(array(
+                'label' => $__('Storage Type'),
+                'configuration' => array('data-name'=>'storage_type'),
+                'choices' => array(
+                    'amazon_s3' => $__('Amazon S3 Storage'),
+                    's3_compatible' => $__('S3 Compatible Storage'),
+                ),
+                'default' => 'amazon_s3',
+            )),
+            'rest-endpoint' => new TextboxField(array(
+                'label' => $__('REST Endpoint'),
+                'hint' => $__('Specify S3-compatible API endpoint (ex: https://s3.wasabisys.com)'),
+                'configuration' => array('size'=> 40, 'length'=> 80),
+                'visibility' => new VisibilityConstraint(
+                    new Q(array('storage_type__eq'=> 's3_compatible')),
+                    VisibilityConstraint::HIDDEN
+                ),
+            )),
+            'rest-region' => new TextboxField(array(
+                'label' => $__('REST Region'),
+                'hint' => $__('Specify S3-compatible API Region (ex:us-east-1)'),
+                'configuration' => array('size'=>30),
+                'visibility' => new VisibilityConstraint(
+                    new Q(array('storage_type__eq'=> 's3_compatible')),
+                    VisibilityConstraint::HIDDEN
+                ),
+            )),
             'aws-region' => new ChoiceField(array(
                 'label' => $__('AWS Region'),
                 'choices' => array(
@@ -66,6 +93,11 @@ class S3StoragePluginConfig extends PluginConfig {
                     'us-gov-west-1' => 'AWS GovCloud (US-West)',
                 ),
                 'default' => '',
+                //'visibility' => 'amazon_s3', // Visibilidad condicional
+                'visibility' => new VisibilityConstraint(
+                    new Q(array('storage_type__eq'=> 'amazon_s3')),
+                    VisibilityConstraint::HIDDEN
+                ),
             )),
             'acl' => new ChoiceField(array(
                 'label' => $__('Default ACL for Attachments'),
@@ -106,8 +138,30 @@ class S3StoragePluginConfig extends PluginConfig {
                 ?: Crypto::decrypt($this->get('secret-access-key'), SECRET_SALT,
                         $this->getNamespace()),
         );
-        if ($config['aws-region'])
-            $credentials['region'] = $config['aws-region'];
+        
+        if ($config['storage_type'] === 's3_compatible') {
+            // Si el campo rest-endpoint está vacío, añade un error
+            if (empty($config['rest-endpoint'])) {
+                $this->getForm()->getField('rest-endpoint')->addError(
+                    __('REST Endpoint is required for S3 Compatible Storage'));
+                $errors['err'] = __('Please complete the required fields.');
+            } elseif (!filter_var($config['rest-endpoint'], FILTER_VALIDATE_URL)) {
+                $this->getForm()->getField('rest-endpoint')->addError(
+                    __('Please enter a valid URL for the REST Endpoint'));
+                $errors['err'] = __('Please enter a valid URL.');
+            }
+
+            if (empty($config['rest-region'])) {
+                $this->getForm()->getField('rest-region')->addError(
+                    __('REST Region is required for S3 Compatible Storage'));
+                $errors['err'] = __('Please complete the required fields.');
+            }
+            $credentials['endpoint'] = $config['rest-endpoint'];
+            $credentials['region'] = $config['rest-region'];
+        }else{       
+            if ($config['aws-region'])
+                $credentials['region'] = $config['aws-region'];
+        }
 
         if (!$credentials['credentials']['secret'])
             $this->getForm()->getField('secret-access-key')->addError(

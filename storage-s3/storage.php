@@ -36,11 +36,18 @@ class S3StorageBackend extends FileStorageBackend {
             'secret' => Crypto::decrypt(static::$config['secret-access-key'],
                 SECRET_SALT, $this->getConfig()->getNamespace())
         );
-        if (static::$config['aws-region'])
-            $credentials['region'] = static::$config['aws-region'];
+
+        if (static::$config['storage_type'] == 's3_compatible'){
+            $credentials['endpoint'] = static::$config['rest-endpoint'];
+            $credentials['region'] = static::$config['rest-region'];
+        }else{
+            if (static::$config['aws-region'])
+              $credentials['region'] = static::$config['aws-region'];
+        }
+        
 
         $credentials['version'] = self::$version;
-        $credentials['signature_version'] = self::$sig_vers;
+        $credentials['signature_version'] = self::$sig_vers;     
 
         $this->client = new S3Client($credentials);
     }
