@@ -8,3 +8,17 @@ Vagrantfile
 
 # Staging directory used for packaging script
 stage
+
+# Ignore compiled phar files
+*.phar
+
+# Ignore hydrated libs & include dir
+**/lib
+**/include
+
+# Ignore installed dependencies and composer if placed here
+lib/*
+!/lib/pear-pear.php.net/
+composer.phar
+composer.lock
+composer.json
