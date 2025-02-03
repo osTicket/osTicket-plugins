@@ -628,7 +628,7 @@ class Net_LDAP2 extends PEAR
                ignore errors, because the server may refuse to return
                attributes over unencryted connections. */
             $supported_extensions = $rootDSE->getValue('supportedExtension');
-            if (self::isError($supported_extensions)) {
+            if (self::isError($supported_extensions)||empty($supported_extensions)) {
                 /* IGNORE error, because server may refuse attribute
                    returning over an unencrypted connection. */
                 //return $this->raiseError("Unable to fetch rootDSE attribute 'supportedExtension' ".
