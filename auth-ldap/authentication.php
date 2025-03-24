@@ -38,7 +38,7 @@ class LDAPAuthentication {
                 'mobile' => false,
                 'username' => 'sAMAccountName',
                 'dn' => '{username}@{domain}',
-                'search' => '(&(objectCategory=person)(objectClass=user)(|(sAMAccountName={q}*)(firstName={q}*)(lastName={q}*)(displayName={q}*)))',
+                'search' => '(&(objectCategory=person)(objectClass=user)(|(sAMAccountName={q}*)(givenName={q}*)(sn={q}*)(displayName={q}*)(mail={q}*)))',
                 'lookup' => '(&(objectCategory=person)(objectClass=user)({attr}={q}))',
             ),
             'group' => array(
