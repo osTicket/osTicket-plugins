@@ -54,6 +54,14 @@ class OAuth2Config extends PluginConfig {
         return $this->get('urlResourceOwnerDetails');
     }
 
+    public function getLogoutUrl() {
+        return $this->get('urlLogout');
+    }
+
+    public function getPostLogoutRedirectUri() {
+        return $this->get('urlPostLogout') ?: osTicket::get_base_url();
+    }
+
     public function getAttributeFor($name, $default=null) {
         return $this->get("attr_$name", $default);
     }
@@ -227,6 +235,46 @@ class OAuth2Config extends PluginConfig {
                         'length' => 0
                     ),
                     'default' => '',
+                )
+            ),
+            'logout_settings' => new SectionBreakField(array(
+                'label' => $__('Logout Settings'),
+                'hint' => $__('Optional OIDC RP-Initiated Logout configuration'),
+                'visibility' => new VisibilityConstraint(
+                    new Q(array('auth_type__eq' => 'auth')),
+                    VisibilityConstraint::HIDDEN
+                ),
+            )),
+            'urlLogout' => new TextboxField(
+                array(
+                    'label' => $__('Logout Endpoint'),
+                    'hint' => $__('OIDC end_session_endpoint. When set, users will be redirected here on logout to also end their IdP session (e.g. Keycloak: https://host/realms/{realm}/protocol/openid-connect/logout). Leave blank to disable IdP logout.'),
+                    'required' => false,
+                    'configuration' => array(
+                        'size' => 64,
+                        'length' => 0
+                    ),
+                    'default' => '',
+                    'visibility' => new VisibilityConstraint(
+                        new Q(array('auth_type__eq' => 'auth')),
+                        VisibilityConstraint::HIDDEN
+                    ),
+                )
+            ),
+            'urlPostLogout' => new TextboxField(
+                array(
+                    'label' => $__('Post-Logout Redirect URI'),
+                    'hint' => $__('Where to redirect after the IdP logout completes. Defaults to osTicket base URL if blank. Must be registered as an allowed post-logout redirect URI in your IdP client configuration.'),
+                    'required' => false,
+                    'configuration' => array(
+                        'size' => 64,
+                        'length' => 0
+                    ),
+                    'default' => '',
+                    'visibility' => new VisibilityConstraint(
+                        new Q(array('auth_type__eq' => 'auth')),
+                        VisibilityConstraint::HIDDEN
+                    ),
                 )
             ),
             'scopes' => new TextboxField(

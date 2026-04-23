@@ -90,6 +90,12 @@ trait OAuth2AuthenticationTrait {
                 && ($token=$this->provider->getToken($resp['code']))
                 && ($attrs=$token->getOwnerAttributes())) {
                 $this->resetState();
+                // Store OIDC logout data for use by signOut
+                if (($idToken = $token->getIdToken()))
+                    $this->session['id_token'] = $idToken;
+                $this->session['logout_url']      = $this->config->getLogoutUrl();
+                $this->session['post_logout_uri'] = $this->config->getPostLogoutRedirectUri();
+                $this->session['client_id']       = $this->config->getClientId();
                 // Attempt to signIn the user based on returned attributes
                 $result = $this->signIn($attrs);
                 if ($result instanceof AuthenticatedUser) {
@@ -146,7 +152,28 @@ trait OAuth2AuthenticationTrait {
     }
 
     static function signOut($user) {
+        // Capture OIDC logout data before parent clears the session
+        $sess          = $_SESSION[':oauth'][static::$id] ?? [];
+        $idToken       = $sess['id_token']       ?? null;
+        $logoutUrl     = $sess['logout_url']     ?? null;
+        $postLogoutUri = $sess['post_logout_uri'] ?? null;
+        $clientId      = $sess['client_id']      ?? null;
+
+        // Clear local osTicket session (existing behaviour)
         parent::signOut($user);
+
+        // Clear OAuth session data
+        unset($_SESSION[':oauth'][static::$id]);
+
+        // Perform RP-Initiated Logout if an end_session_endpoint is configured
+        if ($logoutUrl) {
+            $params = array_filter([
+                'id_token_hint'            => $idToken,
+                'client_id'                => $clientId,
+                'post_logout_redirect_uri' => $postLogoutUri,
+            ]);
+            Http::redirect($logoutUrl . '?' . http_build_query($params));
+        }
     }
 
     abstract function signIn($attrs);
@@ -650,6 +677,11 @@ class Token extends AccessToken {
 
     protected function getUniqueName() {
         return $this->getJwt()->unique_name;
+    }
+
+    public function getIdToken() {
+        $values = $this->getValues();
+        return $values['id_token'] ?? null;
     }
 
     public function setOwner(Object $owner) {
