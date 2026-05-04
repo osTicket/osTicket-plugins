@@ -2,9 +2,9 @@
 
 return array(
     'id' =>             '2fa:auth', # notrans
-    'version' =>        '0.3',
+    'version' =>        '0.4',
     'name' =>           /* trans */ 'Two Factor Authenticator',
-    'author' =>         'Adriane Alexander',
+    'author' =>         'Adriane Alexander & Talal Alhayek',
     'description' =>    /* trans */ 'Provides 2 Factor Authentication
                         using an Authenticator App',
     'url' =>            'https://www.osticket.com/download',

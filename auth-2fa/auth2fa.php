@@ -12,7 +12,8 @@ class Auth2FAPlugin extends Plugin {
         if ($config->get('custom_issuer'))
             Auth2FABackend::$custom_issuer = $config->get('custom_issuer');
 
-        TwoFactorAuthenticationBackend::register('Auth2FABackend');
+        Staff2FABackend::register('Auth2FABackend');
+        User2FABackend::register('UserAuth2FABackend');
     }
 
     function enable() {
