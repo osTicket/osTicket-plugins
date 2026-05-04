@@ -12,10 +12,30 @@ class Auth2FABackend extends TwoFactorAuthenticationBackend {
 
     protected function getSetupOptions() {
         global $thisstaff;
+        global $thisclient;
 
-        $auth2FA = new Auth2FABackend;
-        $qrCodeURL = $auth2FA->getQRCode($thisstaff);
-        if ($auth2FA->validateQRCode($thisstaff)) {
+        $currentUser = null;
+        $auth2FA = null;
+        $email = null;
+        switch (true) {
+            case !empty($thisstaff) && ($thisstaff instanceof Staff || $thisstaff instanceof StaffSession):
+                $currentUser = $thisstaff;
+                $auth2FA = new Auth2FABackend;
+                $email = $currentUser->getEmail();
+                break;
+            case !empty($thisclient) && ($thisclient instanceof ClientAccount || $thisclient instanceof UserAccount || $thisclient instanceof ClientSession):
+                $user = $thisclient->getUser(true);
+                $currentUser = $user->getAccount();
+                $auth2FA = new UserAuth2FABackend;
+                $email = $user->getEmail();
+                break;
+            default:
+                error_log("class of: " . get_class($thisclient));
+                return false;
+        }
+
+        $qrCodeURL = $auth2FA->getQRCode($currentUser);
+        if ($auth2FA->validateQRCode($currentUser)) {
             return array(
                 '' => new FreeTextField(array(
                     'configuration' => array(
@@ -31,7 +51,7 @@ class Auth2FABackend extends TwoFactorAuthenticationBackend {
                                 <img src="%s" alt="QR Code" />
                                 </td>
                             </tr>',
-                            $thisstaff->getEmail(), $qrCodeURL),
+                            $email, $qrCodeURL),
                     )
                 )),
             );
@@ -60,17 +80,17 @@ class Auth2FABackend extends TwoFactorAuthenticationBackend {
         if (!($form->isValid()
                     && ($clean=$form->getClean())
                     && $clean['token']))
-            return false;
+            return false; // keep this
 
         if (!$this->validateLoginCode($clean['token']))
-            return false;
+            return false; // keep this
 
         // upstream validation might throw an exception due to expired token
         // or too many attempts (timeout). It's the responsibility of the
         // caller to catch and handle such exceptions.
         $secretKey = $this->getSecretKey();
         if (!$this->_validate($secretKey))
-            return false;
+            return false; // keep this
 
         // Validator doesn't do house cleaning - it's our responsibility
         $this->onValidate($user);
@@ -82,6 +102,10 @@ class Auth2FABackend extends TwoFactorAuthenticationBackend {
         global $cfg;
 
         // Get backend configuration for this user
+    
+        global $thisclient;
+        if ($thisclient) $user = $thisclient->getUser(true)->getAccount();
+
         if (!$cfg || !($info = $user->get2FAConfig($this->getId())))
             return false;
 
@@ -98,16 +122,46 @@ class Auth2FABackend extends TwoFactorAuthenticationBackend {
     }
 
     function store($secretKey) {
-       global $thisstaff;
+       $nameLookUp = null;
+       $currentUser = null;
+
+       global $thisstaff, $thisclient;
+       if ($thisstaff) {
+            $currentUser = $thisstaff;
+            $nameLookUp = 'staff.';
+        }
+       elseif ($thisclient) {
+            $currentUser = $thisclient->getUser(true)->getAccount();
+            $nameLookUp = 'user.';
+        }
+        
+
+       if (empty($secretKey)) {
+           return false; 
+       }
 
        $store =  &$_SESSION['_2fa'][$this->getId()];
        $store = ['otp' => $secretKey, 'time' => time(), 'strikes' => 0];
 
-       if ($thisstaff) {
+       if ($currentUser) {
+        $userValue = null;
+        switch (true) {
+            case $currentUser instanceof ClientAccount:
+                $userValue = $currentUser->getUserId();
+                break;
+            case $currentUser instanceof User:
+                $userValue = $currentUser->getId();
+                break;
+            case $currentUser instanceof Staff || $currentUser instanceof StaffSession:
+                $userValue = $currentUser->getId();
+                break;
+            default:
+                return false;
+        }
            $config = array('config' => array('key' => $secretKey, 'external2fa' => true));
-           $_config = new Config('staff.'.$thisstaff->getId());
+           $_config = new Config($nameLookUp.$userValue);
            $_config->set($this->getId(), JsonDataEncoder::encode($config));
-           $thisstaff->_config = $_config->getInfo();
+           $currentUser->_config = $_config->getInfo();
            $errors['err'] = '';
        }
 
@@ -121,13 +175,34 @@ class Auth2FABackend extends TwoFactorAuthenticationBackend {
         return $auth2FA->checkCode($secretKey, $code);
     }
 
-    function getSecretKey($staff=false) {
-        if (!$staff) {
-            $s = StaffAuthenticationBackend::getUser();
-            $staff = Staff::lookup($s->getId());
+    function getSecretKey($currentUser=false) {
+        global $thisstaff, $thisclient;
+        $userValue = null;
+        $nameLookUp = null;
+        if ($currentUser instanceof Staff || $currentUser instanceof StaffSession) {
+            $userValue = $currentUser->getId();
+            $nameLookUp = 'staff.';
+        }
+        elseif ($currentUser instanceof ClientAccount) {
+            $user = $currentUser->getUser(true);
+            $userValue = $user->getId();
+            $nameLookUp = 'user.';
+        }
+        elseif ($currentUser instanceof User || $currentUser instanceof ClientSession) {
+            $userValue = $currentUser->getId();
+            $nameLookUp = 'user.';
+        }
+        elseif ($thisstaff) {
+            $userValue = $thisstaff->getId();
+            $nameLookUp = 'staff.';
+        }
+        elseif ($thisclient) {
+            $user = $thisclient->getUser(true);
+            $userValue = $user->getId();
+            $nameLookUp = 'user.';
         }
 
-        if (!$token = ConfigItem::getConfigsByNamespace('staff.'.$staff->getId(), static::$id)) {
+        if (!$token = ConfigItem::getConfigsByNamespace($nameLookUp.$userValue, static::$id)) {
             $auth2FA = new \Sonata\GoogleAuthenticator\GoogleAuthenticator();
             $this->secretKey = $auth2FA->generateSecret();
             $this->store($this->secretKey);
@@ -142,27 +217,49 @@ class Auth2FABackend extends TwoFactorAuthenticationBackend {
         return $key;
     }
 
-    function getQRCode($staff=false) {
-        $staffEmail = $staff->getEmail();
-        $secretKey = $this->getSecretKey($staff);
+    function getQRCode($currentUser=false) {
+        if ($currentUser instanceof ClientAccount) $userEmail = $currentUser->getUser()->getEmail();
+        else $userEmail = $currentUser->getEmail();
+        $secretKey = $this->getSecretKey($currentUser);
         $title = preg_replace('/[^A-Za-z0-9]/', '', self::$custom_issuer ?: __('osTicket'));
-
-        return \Sonata\GoogleAuthenticator\GoogleQrUrl::generate($staffEmail, $secretKey, $title);
+        return \Sonata\GoogleAuthenticator\GoogleQrUrl::generate($userEmail, $secretKey, $title);
     }
 
-    function validateQRCode($staff=false) {
+    function validateQRCode($currentUser=false) {
         $auth2FA = new \Sonata\GoogleAuthenticator\GoogleAuthenticator();
-        $secretKey = $this->getSecretKey($staff);
-        $code = self::getCode();
+        $secretKey = $this->getSecretKey($currentUser);
+        // Fix: Generate code using the CURRENT secret key, not a new backend instance
+        $code = $auth2FA->getCode($secretKey);
 
         return $auth2FA->checkCode($secretKey, $code);
     }
 
-    static function getCode() {
+    static function getCode($currentUser=false) {
+        if (!$currentUser) {
+            global $thisstaff, $thisclient;
+            if ($thisstaff) {
+                $currentUser = $thisstaff;
+                $self = new Auth2FABackend();
+            }
+            elseif ($thisclient) {
+                $currentUser = $thisclient->getUser(true)->getAccount();
+                $self = new UserAuth2FABackend();
+            }
+        }
+
         $auth2FA = new \Sonata\GoogleAuthenticator\GoogleAuthenticator();
-        $self = new Auth2FABackend();
         $secretKey = $self->getSecretKey();
 
         return $auth2FA->getCode($secretKey);
     }
+}
+
+class UserAuth2FABackend extends Auth2FABackend {
+    static $id = "auth.user";
+    static $name = "Authenticator";
+
+    static $desc = /* @trans */ 'Verification codes are located in the Authenticator app of your choice on your phone';
+    static $custom_issuer;
+
+    var $secretKey;
 }
