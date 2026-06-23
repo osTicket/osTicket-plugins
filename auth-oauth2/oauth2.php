@@ -84,7 +84,7 @@ trait OAuth2AuthenticationTrait {
     }
 
     function callback($resp, $ref=null) {
-        //TODO: Log any errors to system logs
+        global $ost;
         try {
             if ($this->getState() == $resp['state']
                 && ($token=$this->provider->getToken($resp['code']))
@@ -97,9 +97,26 @@ trait OAuth2AuthenticationTrait {
                     // desired panel
                     if ($this->login($result, $this))
                         $this->onSignIn();
+                } elseif ($ost) {
+                    $ost->logWarning(sprintf('%s: Sign In Failed',
+                        $this->getServiceName()),
+                        'The identity provider returned valid attributes, '
+                        .'but no local account could be matched or '
+                        .'auto-registered for them.', false);
                 }
+            } elseif ($ost) {
+                $ost->logWarning(sprintf('%s: OAuth2 Callback Failed',
+                    $this->getServiceName()),
+                    'The OAuth2 callback did not complete: the state '
+                    .'parameter did not match, or the identity provider '
+                    .'did not return a usable access token / owner '
+                    .'attributes (e.g. invalid_client, invalid_grant, or '
+                    .'an expired authorization code).', false);
             }
         } catch (Exception $ex) {
+            if ($ost)
+                $ost->logError(sprintf('%s: OAuth2 Authentication Error',
+                    $this->getServiceName()), $ex->getMessage(), false);
             return false;
         }
     }
